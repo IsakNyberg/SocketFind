@@ -74,8 +74,6 @@ class Entity:
             if self.weakness == other.name:
                 self.damage += 1
                 other.points += 1
-                other.size -= 1
-                self.size += 1
                 return True
         return False
 
