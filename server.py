@@ -4,7 +4,7 @@ import time
 from threading import Thread
 
 from field import *
-localIP = "127.0.0.1"
+localIP = "13.90.90.170"
 localPort = 63834
 bufferSize = 1024
 msgFromServer = "Hello UDP Client"

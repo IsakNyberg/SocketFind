@@ -4,7 +4,7 @@ from threading import Thread
 from display import *
 from field import *
 
-serverAddressPort = ("127.0.0.1", 63834)
+serverAddressPort = ("13.90.90.170", 63834)
 bufferSize = 1024
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
