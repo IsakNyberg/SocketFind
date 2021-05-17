@@ -1,7 +1,6 @@
 import pygame
 import socket
 from threading import Thread
-from display import *
 from field import *
 
 serverAddressPort = ("13.90.90.170", 63834)
@@ -66,7 +65,7 @@ if __name__ == '__main__':
             if event.type == pygame.QUIT:
                 running = False
 
-        screen.fill((255, 255, 255))
+        screen.fill((0x89, 0x89, 0x89))
         weakness = field.entities[self_index].weakness
         for e in field.entities:
             x = e.x_position

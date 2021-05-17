@@ -69,7 +69,7 @@ class Entity:
         if other is self:
             return False
         dist_squared = (self.x_position - other.x_position) ** 2 + (self.y_position - other.y_position) ** 2
-        if dist_squared < self.size ** 2 + other.size ** 2:
+        if dist_squared < (self.size other.size) ** 2:
             self.ball_bounce(other)
             if self.weakness == other.name:
                 self.damage += 1
