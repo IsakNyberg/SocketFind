@@ -1,10 +1,10 @@
 import pygame
 import socket
-import time
+import math
 from threading import Thread
 
 from field import *
-localIP = "13.90.90.170"
+localIP = ""
 localPort = 63834
 bufferSize = 1024
 msgFromServer = "Hello UDP Client"
@@ -34,6 +34,8 @@ def game_thread(field, connections):
 if __name__ == '__main__':
     connections = []
     field = Field()
+    for i in range(3):
+        field.new_player()
     thread = Thread(target=game_thread, args=(field, connections, ))
     thread.start()
     while len(connections) < 255:
@@ -41,11 +43,12 @@ if __name__ == '__main__':
         message = bytesAddressPair[0]
         address = bytesAddressPair[1]
 
-        if address not in connections:
+        if address not in connections or len(message) == 1:
             connections.append(address)
             field.new_player()
             index = len(connections) - 1
             UDPServerSocket.sendto(index.to_bytes(1, 'big'), address)
+            flood(connections, field.to_bytes())
         else:
             index = connections.index(address)
         field.steer(index, message[0] - 1, message[1] - 1)
