@@ -84,7 +84,7 @@ if __name__ == '__main__':
     sound5 = pygame.mixer.Sound('resources/sound5.mp3')
     clock = pygame.time.Clock()
 
-    screen = pygame.display.set_mode([MAX_POSITION_X, MAX_POSITION_Y])
+    screen = pygame.display.set_mode([MAX_POSITION, MAX_POSITION])
     tick = 0
     running = True
     print('start Game')
@@ -123,17 +123,15 @@ if __name__ == '__main__':
                 sound5.play()
 
         screen.fill(BACKGROUND)
-        weakness = field.entities[self_index].weakness
-        for e in field.entities:
-            x = e.x_position
-            y = e.y_position
+        weakness = field.players[self_index].weakness
+        for e in field.players:
             if e.name == self_index:
                 display.draw_entity(screen, e, colour=SELF_COLOUR)
             elif e.name == weakness:
                 display.draw_entity(screen, e, colour=WEAKNESS_COLOUR)
             else:
                 display.draw_entity(screen, e, colour=OTHER_COLOUR)
-        text_surface = font.render(f'Score: {field.entities[self_index].score}/{field.score}', False, (0, 0, 0))
+        text_surface = font.render(f'Score: {field.players[self_index].score}/{field.score}', False, (0, 0, 0))
         screen.blit(text_surface, (10, 10))
         pygame.display.flip()
 

@@ -25,7 +25,7 @@ if __name__ == '__main__':
         field.new_player()
 
     pygame.init()
-    screen = pygame.display.set_mode([MAX_POSITION_X, MAX_POSITION_Y])
+    screen = pygame.display.set_mode([MAX_POSITION, MAX_POSITION])
 
     running = True
     clock = pygame.time.Clock()
@@ -36,13 +36,13 @@ if __name__ == '__main__':
                 running = False
 
         field.tick()
-        for i in range(len(field.entities)):
-            x = field.entities[(i+1)%len(field.entities)].x_position - field.entities[(i-1)%len(field.entities)].x_position
-            y = field.entities[(i+1)%len(field.entities)].y_position - field.entities[(i-1)%len(field.entities)].y_position
+        for i in range(len(field.players)):
+            x = field.players[(i + 1) % len(field.players)].x_position - field.players[(i - 1) % len(field.players)].x_position
+            y = field.players[(i + 1) % len(field.players)].y_position - field.players[(i - 1) % len(field.players)].y_position
             field.steer(i, x, y)
         field.steer(1, *get_keys())
         screen.fill((255, 255, 255))
-        for e in field.entities:
+        for e in field.players:
             x = e.x_position
             y = e.y_position
             pygame.draw.circle(screen, 'red', (x, y), e.size)

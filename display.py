@@ -16,8 +16,8 @@ def normalize(a, b):
 
 
 def draw_entity(screen, entity, colour=OTHER_COLOUR):
-    x = entity.x_position
-    y = entity.y_position
+    x = entity.position[0]
+    y = entity.position[1]
     size = entity.size
 
     front_x = x + size * entity.direction[0] * 1.5
