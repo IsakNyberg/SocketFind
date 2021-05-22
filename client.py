@@ -145,7 +145,7 @@ if __name__ == '__main__':
             else:
                 display.draw_entity(screen, e, colour=OTHER_COLOUR, offset_x=offset_x, offset_y=offset_y)
 
-        text_surface = font.render(f'Score: {field.players[SELF_INDEX].score}/{field.score}', False, (0, 0, 0))
+        text_surface = font.render(f'Score: {field.players[SELF_INDEX].score}/{field.score}', False, (0xff, 0xff, 0xff))
         screen.blit(text_surface, (10, 10))
         pygame.display.flip()
 
