@@ -9,7 +9,7 @@ ACCELERATION_FRACTION = 30
 TURN_angle = 2  # 120 * this many degrees per second
 FRICTION = 0.99
 MAX_VELOCITY = 4
-MAX_POSITION = 850
+MAX_POSITION = 2000
 SIZE = 20
 
 WALL_COLLISION = 1 << 0
@@ -62,6 +62,7 @@ class Player(Entity):
         self.velocity = Vector([0.0, 0.0])
         self.acceleration = 0
         self.direction = Vector([1.0, 0.0])
+        self.cool_down = 0
 
     @property
     def score(self):
@@ -113,9 +114,10 @@ class Player(Entity):
         dist_squared = (self.position - other.position).length_squared
         if dist_squared < (self.size + other.size) ** 2:
             self.ball_bounce(other)
-            if self.weakness == other.name:
+            if self.weakness == other.name and not self.cool_down:
                 self.damage += 1
                 other.points += 1
+                self.cool_down = 360
                 return 2
             return 1
         return 0
@@ -130,20 +132,20 @@ class Player(Entity):
         bounce = False
         if self.position[0] + self.size > MAX_POSITION:
             self.velocity[0] = -MAX_VELOCITY
-            self.direction[0] = -1
+            self.direction[0] *= -1
             bounce = True
         elif self.position[0] - self.size < 0:
             self.velocity[0] = MAX_VELOCITY
-            self.direction[0] = 1
+            self.direction[0] *= -1
             bounce = True
 
         if self.position[1] + self.size > MAX_POSITION:
             self.velocity[1] = -MAX_VELOCITY
-            self.direction[1] = -1
+            self.direction[1] *= -1
             bounce = True
         elif self.position[1] - self.size < 0:
             self.velocity[1] = MAX_VELOCITY
-            self.direction[1] = 1
+            self.direction[1] *= -1
             bounce = True
         return bounce
 
@@ -221,6 +223,9 @@ class Field:
         for entity in self.players:
             entity.accelerate()
             entity.move()
+            if entity.cool_down:
+                entity.cool_down -= 1
+
             if entity.wall_bounce():
                 self.status.append(WALL_COLLISION)
 

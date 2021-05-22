@@ -4,16 +4,20 @@ from threading import Thread
 from field import *
 import display
 
-serverAddressPort = ("localhost", 63834)
+serverAddressPort = ('85.229.18.138', 63834)
 bufferSize = 1024
 
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-UDPClientSocket.settimeout(2)
-BACKGROUND = '#363638'
+UDPClientSocket.settimeout(1)
+BACKGROUND = '#000000'
+BG = pygame.image.load("resources/bg.jpg")
 SELF_COLOUR = '#1cff91'
 WEAKNESS_COLOUR = '#cc4781'
 OTHER_COLOUR = '#6c55e0'
+COOL_DOWN_COLOUR = '#fff78a'
 TIMEOUT = 0
+SCREEN_SIZE = 800
+SELF_INDEX = -1
 
 
 def get_keys():
@@ -32,7 +36,7 @@ def get_keys():
 
 
 def game_thread(field):
-    global TIMEOUT
+    global TIMEOUT, SELF_INDEX
     while 1:
         try:
             received_byes = UDPClientSocket.recvfrom(bufferSize)
@@ -45,22 +49,26 @@ def game_thread(field):
                 print('timeout')
             else:
                 print('.', end='')
+            SELF_INDEX = -1
+            server_connect()
             TIMEOUT += 1
 
 
 def server_connect():
-    self_index = -1
-    while self_index == -1:
+    global SELF_INDEX, field
+    while SELF_INDEX == -1:
         try:
             UDPClientSocket.sendto(b'0x00', serverAddressPort)
-            self_index = int.from_bytes(UDPClientSocket.recvfrom(bufferSize)[0], 'big')
-            field.self_index = self_index
+            message = UDPClientSocket.recvfrom(bufferSize)[0]
+            if len(message) != 1:
+                continue
+            SELF_INDEX = int.from_bytes(message, 'big')
+            field.self_index = SELF_INDEX
 
             received_byes = UDPClientSocket.recvfrom(bufferSize)
             field.from_bytes(received_byes[0])
         except socket.timeout:
             print('.', end='')
-    return self_index
 
 
 if __name__ == '__main__':
@@ -69,7 +77,7 @@ if __name__ == '__main__':
     field.new_player()
 
     print('Logging into server', end='')
-    self_index = server_connect()
+    server_connect()
     print('\nFetching game from server')
     thread = Thread(target=game_thread, args=(field, ))
     thread.start()
@@ -84,7 +92,7 @@ if __name__ == '__main__':
     sound5 = pygame.mixer.Sound('resources/sound5.mp3')
     clock = pygame.time.Clock()
 
-    screen = pygame.display.set_mode([MAX_POSITION, MAX_POSITION])
+    screen = pygame.display.set_mode([SCREEN_SIZE, SCREEN_SIZE])
     tick = 0
     running = True
     print('start Game')
@@ -95,7 +103,7 @@ if __name__ == '__main__':
 
         # get steering data and send to server
         keys = get_keys()
-        field.steer(self_index, *keys)
+        field.steer(SELF_INDEX, *keys)
         data = bytearray()
         data.append(keys[0]+1)
         data.append(keys[1]+1)
@@ -107,9 +115,8 @@ if __name__ == '__main__':
         if TIMEOUT:
             while TIMEOUT:
                 pass
-            self_index = server_connect()
 
-        status = field.tick(self_index)
+        status = field.tick(SELF_INDEX)
         for s in status:
             if s == WALL_COLLISION:
                 sound1.play()
@@ -123,15 +130,22 @@ if __name__ == '__main__':
                 sound5.play()
 
         screen.fill(BACKGROUND)
-        weakness = field.players[self_index].weakness
+        weakness = field.players[SELF_INDEX].weakness
+        offset_x = field.players[SELF_INDEX].position[0] - SCREEN_SIZE // 2
+        offset_y = field.players[SELF_INDEX].position[1] - SCREEN_SIZE // 2
+        screen.blit(BG, (-offset_x, -offset_y))
+
         for e in field.players:
-            if e.name == self_index:
-                display.draw_entity(screen, e, colour=SELF_COLOUR)
+            if e.cool_down:
+                display.draw_entity(screen, e, colour=COOL_DOWN_COLOUR, offset_x=offset_x, offset_y=offset_y)
+            elif e.name == SELF_INDEX:
+                display.draw_entity(screen, e, colour=SELF_COLOUR, offset_x=offset_x, offset_y=offset_y)
             elif e.name == weakness:
-                display.draw_entity(screen, e, colour=WEAKNESS_COLOUR)
+                display.draw_entity(screen, e, colour=WEAKNESS_COLOUR, offset_x=offset_x, offset_y=offset_y)
             else:
-                display.draw_entity(screen, e, colour=OTHER_COLOUR)
-        text_surface = font.render(f'Score: {field.players[self_index].score}/{field.score}', False, (0, 0, 0))
+                display.draw_entity(screen, e, colour=OTHER_COLOUR, offset_x=offset_x, offset_y=offset_y)
+
+        text_surface = font.render(f'Score: {field.players[SELF_INDEX].score}/{field.score}', False, (0, 0, 0))
         screen.blit(text_surface, (10, 10))
         pygame.display.flip()
 
