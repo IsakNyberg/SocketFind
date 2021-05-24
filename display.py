@@ -10,6 +10,7 @@ WEAKNESS_COLOUR = '#cc4781'
 OTHER_COLOUR = '#6c55e0'
 COOL_DOWN_COLOUR = '#fff78a'
 BG = pygame.image.load("resources/bg2.jpg")
+MINI_OFFSET = 100
 
 
 def draw_world(screen, offset_x=0, offset_y=0):
@@ -30,11 +31,11 @@ def draw_entity(screen, entity, colour=OTHER_COLOUR, offset_x=0, offset_y=0, min
 
     if mini:
         pygame.draw.polygon(screen, colour, [
-            (x - o_x, y + o_y),
-            (x + o_x, y - o_y),
-            (front_x, front_y),
+            (x - o_x, y + o_y + MINI_OFFSET),
+            (x + o_x, y - o_y + MINI_OFFSET),
+            (front_x, front_y + MINI_OFFSET),
         ])
-        pygame.draw.circle(screen, colour, (x, y), size)
+        pygame.draw.circle(screen, colour, (x, y + MINI_OFFSET), size)
     else:
         pygame.draw.polygon(screen, colour, [
             (x - o_x, y + o_y),
