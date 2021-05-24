@@ -14,8 +14,7 @@ WEAKNESS_COLOUR = '#cc4781'
 OTHER_COLOUR = '#6c55e0'
 COOL_DOWN_COLOUR = '#fff78a'
 
-
-factory = lambda x: M([[math.cos(x),-math.sin(x)], [math.sin(x),math.cos(x)]])
+factory = lambda x: M([[math.cos(x), -math.sin(x)], [math.sin(x), math.cos(x)]])
 directions = map(math.radians, range(-45, 46, 1))
 rot_mats = list(map(factory, directions))
 

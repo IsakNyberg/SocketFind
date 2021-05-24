@@ -143,21 +143,15 @@ if __name__ == '__main__':
         for e in field.players:
             colour = OTHER_COLOUR
             if e.cool_down:
-                colour=COOL_DOWN_COLOUR
+                colour = COOL_DOWN_COLOUR
             elif e is self:
-                colour=SELF_COLOUR
+                colour = SELF_COLOUR
             elif e.target is self:
-                colour=WEAKNESS_COLOUR
+                colour = WEAKNESS_COLOUR
             elif e is self.target:
-                colour=TARGET_COLOUR
+                colour = TARGET_COLOUR
 
-            DISPLAY.draw_entity(
-                screen,
-                e,
-                colour=colour,
-                offset_x=offset_x,
-                offset_y=offset_y
-            )
+            DISPLAY.draw_entity(screen, e, colour=colour, offset_x=offset_x, offset_y=offset_y)
 
         text_surface = font.render(f'Score: {field.players[SELF_INDEX].score}/{field.score}', False, (0xff, 0xff, 0xff))
         screen.blit(text_surface, (10, 10))
