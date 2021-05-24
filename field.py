@@ -171,7 +171,11 @@ class Player(Entity):
         self.target = self
         if len(players) < MIN_PLAYERS:
             return self
-        while self.target == self or self.target.target is self:
+
+        """if all(player.target == self for player in players):
+            self.target = players[random.randint(0, len(players) - 1)]"""
+        tries = 0
+        while self.target == self or (self.target.target is self and tries < len(players) * 2):
             self.target = players[random.randint(0, len(players)-1)]
         return self.target
 
@@ -191,6 +195,8 @@ class Field:
         self.status = []
 
         self.mutex = 0
+
+        self.self_index = -1
 
     @property
     def score(self):
@@ -219,7 +225,8 @@ class Field:
         entity.set_position(x, y)
         self.players.append(entity)
         self.status.append(JOIN)
-        self.new_targets()
+        if len(self.players) == MIN_PLAYERS:
+            self.new_targets()
         print('join', len(self.players))
 
     def remove(self, index):
@@ -268,7 +275,6 @@ class Field:
                 min_t = t
         assert min_t < inf, "Not facing any wall"
         return min_t
-
 
     def tick(self, self_index=-1):
         # WALL_COLLISION 0, OTHER_COLLISION 1, WEAKNESS_COLLISION 2, POINT_COLLISION 3, JOIN 4

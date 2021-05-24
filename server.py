@@ -15,11 +15,12 @@ UDPServerSocket.bind((localIP, localPort))
 print("UDP server up and listening")
 
 
-def flood(connections, bytes_to_send):
+def flood(connections, connections_ttl, bytes_to_send):
     try:
         for i in range(len(connections)):
             bytes_to_send += i.to_bytes(1, 'big')
             UDPServerSocket.sendto(bytes_to_send, connections[i])
+            connections_ttl[i] -= 1
     except IndexError:
         print('Index error in flood')
 
@@ -32,16 +33,8 @@ def game_thread(field, connections, connections_ttl):
         tick += 1
         clock.tick(128)
         if tick % 8 == 0:
-            flood(connections, field.to_bytes())
+            flood(connections,connections_ttl,  field.to_bytes())
 
-        for i in range(len(connections_ttl)):
-            if connections_ttl[i] < 0:
-                del connections[i]
-                del connections_ttl[i]
-                field.remove(i)
-                break
-            else:
-                connections_ttl[i] -= 1
 
 
 if __name__ == '__main__':
@@ -63,5 +56,10 @@ if __name__ == '__main__':
         index = connections.index(address)
         connections_ttl[index] = 2000
         field.steer(index, message[0] - 1, message[1] - 1)
-        flood(connections, field.to_bytes())
 
+        for i in range(len(connections_ttl)):
+            if connections_ttl[i] < 0:
+                del connections_ttl[i]
+                del connections[i]
+                field.remove(i)
+                break

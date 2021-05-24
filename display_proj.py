@@ -17,7 +17,7 @@ COOL_DOWN_COLOUR = '#fff78a'
 FOV = 140
 DEG_PER_COL = 1
 
-factory = lambda x: M([[math.cos(x),-math.sin(x)], [math.sin(x),math.cos(x)]])
+factory = lambda x: M([[math.cos(x), -math.sin(x)], [math.sin(x), math.cos(x)]])
 directions = map(math.radians, range(-FOV//2, 1+FOV//2, DEG_PER_COL))
 rot_mats = list(map(factory, directions))
 
