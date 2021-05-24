@@ -1,6 +1,7 @@
 import random
 from struct import pack, unpack
 import math
+from operator import not_
 
 from matrix import Vector, Matrix
 
@@ -215,6 +216,36 @@ class Field:
         self.mutex_wait()
         self.players[n].steer(x, y)
         self.mutex = 0
+
+    def cast_ray_at_wall(self, pos, step):
+        """Distance to first wall from pos in direction step."""
+        walls = (
+            ((0, 0), (0, MAX_POSITION)),
+            ((0, 0), (MAX_POSITION, 0)),
+            ((MAX_POSITION, MAX_POSITION), (0, MAX_POSITION)),
+            ((MAX_POSITION, MAX_POSITION), (MAX_POSITION, 0)),
+            ((MAX_POSITION/2, MAX_POSITION/2), (MAX_POSITION/2, 0)),  # del me
+        )
+        x1, y1 = pos
+        x2, y2 = pos + step
+        min_t = inf = float('inf')
+        for ((x3, y3), (x4, y4)) in walls:
+            Np = (x1-x3)*(y3-y4) - (y1-y3)*(x3-x4)
+            Nw = (x2-x1)*(y1-y3) - (y2-y1)*(x1-x3)
+            D  = (x1-x2)*(y3-y4) - (y1-y2)*(x3-x4)
+            if (
+                D  # D is non-zero
+                and (0 < D) == (0 < Np)
+                # t=Np/D is positive (wall ahead of player)
+                and min(0, D) < Nw < max(0, D)
+                # 0 < u=Nw/D < length (intersection within wall bounds)
+                and (t := Np/D) < min_t
+                # this wall is close than the last
+            ):
+                min_t = t
+        assert min_t < inf, "Not facing any wall"
+        return min_t
+
 
     def tick(self, self_index=-1):
         # WALL_COLLISION 0, OTHER_COLLISION 1, WEAKNESS_COLLISION 2, POINT_COLLISION 3, JOIN 4
