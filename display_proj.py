@@ -45,7 +45,7 @@ def draw_world(screen, field, player, screen_size):
 
 def draw_entity(screen, entity, colour=OTHER_COLOUR, **kwargs):
     # "minimap"
-    display.draw_entity(screen, entity, colour, **kwargs, mult=0.1)
+    display.draw_entity(screen, entity, colour, **kwargs, mini=True)
 
 
 

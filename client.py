@@ -12,8 +12,6 @@ bufferSize = 1024
 
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPClientSocket.settimeout(1)
-BACKGROUND = '#000000'
-BG = pygame.image.load("resources/bg2.jpg")
 SELF_COLOUR = '#1cff91'
 TARGET_COLOUR = '#19ffc1'
 WEAKNESS_COLOUR = '#cc4781'
@@ -24,7 +22,7 @@ SCREEN_SIZE = 800
 SELF_INDEX = -1
 
 # toggle this between display and display_proj
-DISPLAY = display_proj
+DISPLAY = display
 DISPLAY_ID = DISPLAY.DISPLAY_ID
 
 
@@ -133,25 +131,25 @@ if __name__ == '__main__':
             if s == JOIN:
                 sound5.play()
 
-        screen.fill(BACKGROUND)
         self = field.players[SELF_INDEX]
         offset_x = self.position[0] - SCREEN_SIZE // 2
         offset_y = self.position[1] - SCREEN_SIZE // 2
-        screen.blit(BG, (-offset_x, -offset_y))
 
         if DISPLAY_ID == 1:
             DISPLAY.draw_world(screen, offset_x=offset_x, offset_y=offset_y)
         elif DISPLAY_ID == 2:
-            DISPLAY.draw_world(screen, field, player, SCREEN_SIZE)
+            DISPLAY.draw_world(screen, field, self, SCREEN_SIZE)
 
         for e in field.players:
             colour = OTHER_COLOUR
             if e.cool_down:
                 colour=COOL_DOWN_COLOUR
-            elif e.name == SELF_INDEX:
+            elif e is self:
                 colour=SELF_COLOUR
-            elif e.name == weakness:
+            elif e.target is self:
                 colour=WEAKNESS_COLOUR
+            elif e is self.target:
+                colour=TARGET_COLOUR
 
             DISPLAY.draw_entity(
                 screen,
@@ -160,19 +158,6 @@ if __name__ == '__main__':
                 offset_x=offset_x,
                 offset_y=offset_y
             )
-
-        for e in field.entities:
-            if e.cool_down:
-                display.draw_entity(screen, e, colour=COOL_DOWN_COLOUR, offset_x=offset_x, offset_y=offset_y)
-            elif e is self:
-                display.draw_entity(screen, e, colour=SELF_COLOUR, offset_x=offset_x, offset_y=offset_y)
-            elif e.target is self:
-                display.draw_entity(screen, e, colour=WEAKNESS_COLOUR, offset_x=offset_x, offset_y=offset_y)
-            elif e is self.target:
-                display.draw_entity(screen, e, colour=TARGET_COLOUR, offset_x=offset_x, offset_y=offset_y)
-            else:
-                display.draw_entity(screen, e, colour=OTHER_COLOUR, offset_x=offset_x, offset_y=offset_y)
-
 
         text_surface = font.render(f'Score: {field.players[SELF_INDEX].score}/{field.score}', False, (0xff, 0xff, 0xff))
         screen.blit(text_surface, (10, 10))
