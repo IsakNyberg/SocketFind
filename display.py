@@ -37,4 +37,8 @@ def draw_entity(screen, entity, colour=OTHER_COLOUR, offset_x=0, offset_y=0, mul
     else:
         pygame.draw.circle(screen, colour, (x, y), entity.size * mult)
 
+    pygame.draw.circle(screen, colour, (x, y), entity.size, width=2)
+    pygame.draw.circle(screen, colour, (x, y), entity.size - 10)
+
+
 

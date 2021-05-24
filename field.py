@@ -12,6 +12,9 @@ FRICTION = 0.99
 MAX_VELOCITY = 4
 MAX_POSITION = 2000
 SIZE = 20
+GRAVITY_FRACTION = 70
+
+MIN_PLAYERS = 3
 
 WALL_COLLISION = 1 << 0
 OTHER_COLLISION = 1 << 1
@@ -39,28 +42,73 @@ class Entity:
     def __init__(self, name, x=MAX_POSITION // 2, y=MAX_POSITION // 2):
         self.name = name
         self.position = Vector([x, y])
+        self.velocity = Vector([0, 0])
+        self.direction = Vector([0.0, 0.0])
+        self._size = SIZE
 
-    def set_position(self, x, y):
-        self.position[0] = limit_zero(x, MAX_POSITION)
-        self.position[1] = limit_zero(y, MAX_POSITION)
+    @property
+    def size(self):
+        return self._size
 
+    def set_position(self, x=-1, y=-1):
+        if x == -1 and y == -1:
+            x = random.randint(self.size, MAX_POSITION - self.size)
+            y = random.randint(self.size, MAX_POSITION - self.size)
+        vector = Vector([limit_zero(x, MAX_POSITION), limit_zero(y, MAX_POSITION)])
+        self.position = vector
 
-class PowerUp(Entity):
-    def __init__(self, name, x, y):
-        super().__init__(name, x, y)
+    def set_velocity(self, x=-1, y=-1):
+        if x == -1 and y == -1:
+            x = random.randint(-MAX_POSITION, MAX_POSITION)
+            y = random.randint(-MAX_POSITION, MAX_POSITION)
+        vector = Vector([x, y])
+        self.velocity = vector.limit(MAX_VELOCITY)
+
+    def wall_bounce(self):
+        bounce = False
+        if self.position[0] + self.size > MAX_POSITION:
+            self.velocity[0] = -MAX_VELOCITY
+            self.direction[0] *= -1
+            bounce = True
+        elif self.position[0] - self.size < 0:
+            self.velocity[0] = MAX_VELOCITY
+            self.direction[0] *= -1
+            bounce = True
+
+        if self.position[1] + self.size > MAX_POSITION:
+            self.velocity[1] = -MAX_VELOCITY
+            self.direction[1] *= -1
+            bounce = True
+        elif self.position[1] - self.size < 0:
+            self.velocity[1] = MAX_VELOCITY
+            self.direction[1] *= -1
+            bounce = True
+        return bounce
+
+    def gravity(self, mass):
+        acceleration = mass.position - self.position
+        if acceleration.length_squared == 0:
+            return
+        dist_factor = (acceleration.length // GRAVITY_FRACTION ** 2) ** 2
+        self.velocity += acceleration.unit * (1 / (GRAVITY_FRACTION + dist_factor))
+        self.velocity.limit(MAX_VELOCITY)
+
+    def move(self):
+        self.position += self.velocity
+        self.position.limit_zero(MAX_POSITION)
+        self.velocity *= FRICTION
 
 
 class Player(Entity):
     sin = math.sin(math.radians(TURN_angle))
     cos = math.cos(math.radians(TURN_angle))
 
-    def __init__(self, name, weakness=255):
+    def __init__(self, name):
         super().__init__(name)
-        self.weakness = weakness
+        self.target = self
         self.self_index = -1
         self.damage = 0
         self.points = 0
-        self.velocity = Vector([0.0, 0.0])
         self.acceleration = 0
         self.direction = Vector([1.0, 0.0])
         self.cool_down = 0
@@ -90,7 +138,7 @@ class Player(Entity):
             self.direction = self.direction.unit
 
         if forward < 0:
-            self.velocity *= FRICTION ** 5
+            self.velocity *= FRICTION ** 6
         elif forward > 0:
             self.acceleration = 1
         else:
@@ -104,51 +152,28 @@ class Player(Entity):
         self.velocity.limit(MAX_VELOCITY)
         self.acceleration *= FRICTION
 
-    def move(self):
-        self.position += self.velocity
-        self.position.limit_zero(MAX_POSITION)
-        self.velocity *= FRICTION
-
     def is_colliding(self, other):
         if other is self:
             return 0
         dist_squared = (self.position - other.position).length_squared
         if dist_squared < (self.size + other.size) ** 2:
             self.ball_bounce(other)
-            if self.weakness == other.name and not self.cool_down:
-                self.damage += 1
-                other.points += 1
-                self.cool_down = 360
+            if self.target is other and not self.cool_down:
+                self.points += 1
+                other.damage += 1
+                self.cool_down = 255
+                other.cool_down = 255
                 return 2
             return 1
         return 0
 
-    def new_weakness(self, players):
-        self.weakness = self.name
-        while self.weakness == self.name:
-            self.weakness = random.randint(0, players - 1)
-        return self.weakness
-
-    def wall_bounce(self):
-        bounce = False
-        if self.position[0] + self.size > MAX_POSITION:
-            self.velocity[0] = -MAX_VELOCITY
-            self.direction[0] *= -1
-            bounce = True
-        elif self.position[0] - self.size < 0:
-            self.velocity[0] = MAX_VELOCITY
-            self.direction[0] *= -1
-            bounce = True
-
-        if self.position[1] + self.size > MAX_POSITION:
-            self.velocity[1] = -MAX_VELOCITY
-            self.direction[1] *= -1
-            bounce = True
-        elif self.position[1] - self.size < 0:
-            self.velocity[1] = MAX_VELOCITY
-            self.direction[1] *= -1
-            bounce = True
-        return bounce
+    def new_target(self, players):
+        self.target = self
+        if len(players) < MIN_PLAYERS:
+            return self
+        while self.target == self or self.target.target is self:
+            self.target = players[random.randint(0, len(players)-1)]
+        return self.target
 
     def ball_bounce(self, other):
         try:
@@ -175,6 +200,10 @@ class Field:
                 best = entity.points
         return best
 
+    @property
+    def entities(self):
+        return self.players
+
     def mutex_wait(self):
         while self.mutex:
             pass
@@ -190,27 +219,21 @@ class Field:
         entity.set_position(x, y)
         self.players.append(entity)
         self.status.append(JOIN)
-        if len(self.players) >= 3:
-            self.new_targets()
-        return entity
+        self.new_targets()
+        print('join', len(self.players))
 
-    def remove(self, name):
+    def remove(self, index):
         self.status.append(JOIN)
-        if name == -1:
-            del self.players[-1]
-            return True
-
-        for entity in self.players:
-            if entity.name == name:
-                self.players.remove(entity)
-                self.new_targets()
-                return True
-        return False
+        del self.players[index]
+        for i in range(len(self.players)):
+            self.players[i].name = i
+        self.new_targets()
+        print('leave', len(self.players))
 
     def new_targets(self):
         self.status.append(POINT_COLLISION)
         for entity in self.players:
-            entity.new_weakness(len(self.players))
+            entity.new_target(self.players)
 
     def steer(self, n, x, y):
         self.mutex_wait()
@@ -251,22 +274,25 @@ class Field:
         # WALL_COLLISION 0, OTHER_COLLISION 1, WEAKNESS_COLLISION 2, POINT_COLLISION 3, JOIN 4
         if self.mutex:
             return []
-        for entity in self.players:
-            entity.accelerate()
-            entity.move()
-            if entity.cool_down:
-                entity.cool_down -= 1
 
-            if entity.wall_bounce():
+        for player in self.players:
+            player.accelerate()
+            player.move()
+            if player.cool_down:
+                player.cool_down -= 1
+
+            if player.wall_bounce():
                 self.status.append(WALL_COLLISION)
 
         for entity_a in self.players:
             for entity_b in self.players:
+                if entity_a is entity_b:
+                    continue
                 collision = entity_a.is_colliding(entity_b)
                 if collision == 1:
                     self.status.append(OTHER_COLLISION)
                 elif collision == 2:
-                    entity_a.new_weakness(len(self.players))
+                    entity_a.new_target(self.players)
                     if self_index == entity_a.name:
                         self.status.append(WEAKNESS_COLLISION)
                     elif self_index == entity_b.name:
@@ -278,7 +304,7 @@ class Field:
 
     def from_bytes(self, received_bytes):
         self.mutex_wait()
-        s = 4 * 7 + 3
+        s = 4 * 7 + 4
         players = len(received_bytes) // s
         while players < len(self.players):
             self.remove(-1)
@@ -293,9 +319,10 @@ class Field:
             self.players[i].velocity[0] = unpack('f', received_bytes[i * s + 16: i * s + 20])[0]
             self.players[i].velocity[1] = unpack('f', received_bytes[i * s + 20: i * s + 24])[0]
             self.players[i].acceleration = unpack('f', received_bytes[i * s + 24: i * s + 28])[0]
-            self.players[i].weakness = received_bytes[i * s + 28]
+            self.players[i].target = self.players[received_bytes[i * s + 28]]
             self.players[i].damage = received_bytes[i * s + 29]
             self.players[i].points = received_bytes[i * s + 30]
+            self.players[i].cool_down = received_bytes[i * s + 31]
         self.mutex = 0
 
     def to_bytes(self):
@@ -308,8 +335,9 @@ class Field:
             res += pack('f', self.players[i].velocity[0])
             res += pack('f', self.players[i].velocity[1])
             res += pack('f', self.players[i].acceleration)
-            res += self.players[i].weakness.to_bytes(1, 'big')
+            res += self.players[i].target.name.to_bytes(1, 'big')
             res += self.players[i].damage.to_bytes(1, 'big')
             res += self.players[i].points.to_bytes(1, 'big')
+            res += self.players[i].cool_down.to_bytes(1, 'big')
 
         return res

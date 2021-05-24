@@ -1,3 +1,5 @@
+import time
+
 import pygame
 import socket
 from threading import Thread
@@ -10,7 +12,10 @@ bufferSize = 1024
 
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPClientSocket.settimeout(1)
+BACKGROUND = '#000000'
+BG = pygame.image.load("resources/bg2.jpg")
 SELF_COLOUR = '#1cff91'
+TARGET_COLOUR = '#19ffc1'
 WEAKNESS_COLOUR = '#cc4781'
 OTHER_COLOUR = '#6c55e0'
 COOL_DOWN_COLOUR = '#fff78a'
@@ -42,8 +47,10 @@ def game_thread(field):
     global TIMEOUT, SELF_INDEX
     while 1:
         try:
-            received_byes = UDPClientSocket.recvfrom(bufferSize)
-            field.from_bytes(received_byes[0])
+            received_byes = UDPClientSocket.recvfrom(bufferSize)[0]
+            SELF_INDEX = received_byes[-1]
+            received_byes = received_byes[:-1]
+            field.from_bytes(received_byes)
             if TIMEOUT:
                 print('\nRestored')
                 TIMEOUT = 0
@@ -53,7 +60,6 @@ def game_thread(field):
             else:
                 print('.', end='')
             SELF_INDEX = -1
-            server_connect()
             TIMEOUT += 1
 
 
@@ -62,14 +68,11 @@ def server_connect():
     while SELF_INDEX == -1:
         try:
             UDPClientSocket.sendto(b'0x00', serverAddressPort)
-            message = UDPClientSocket.recvfrom(bufferSize)[0]
-            if len(message) != 1:
-                continue
-            SELF_INDEX = int.from_bytes(message, 'big')
+            received_byes = UDPClientSocket.recvfrom(bufferSize)[0]
+            SELF_INDEX = received_byes[-1]
             field.self_index = SELF_INDEX
-
-            received_byes = UDPClientSocket.recvfrom(bufferSize)
-            field.from_bytes(received_byes[0])
+            received_byes = received_byes[:-1]
+            field.from_bytes(received_byes)
         except socket.timeout:
             print('.', end='')
 
@@ -77,8 +80,6 @@ def server_connect():
 if __name__ == '__main__':
     print('Create game')
     field = Field()
-    field.new_player()
-
     print('Logging into server', end='')
     server_connect()
     print('\nFetching game from server')
@@ -132,10 +133,11 @@ if __name__ == '__main__':
             if s == JOIN:
                 sound5.play()
 
-        player = field.players[SELF_INDEX]
-        weakness = player.weakness
-        offset_x = player.position[0] - SCREEN_SIZE // 2
-        offset_y = player.position[1] - SCREEN_SIZE // 2
+        screen.fill(BACKGROUND)
+        self = field.players[SELF_INDEX]
+        offset_x = self.position[0] - SCREEN_SIZE // 2
+        offset_y = self.position[1] - SCREEN_SIZE // 2
+        screen.blit(BG, (-offset_x, -offset_y))
 
         if DISPLAY_ID == 1:
             DISPLAY.draw_world(screen, offset_x=offset_x, offset_y=offset_y)
@@ -158,6 +160,18 @@ if __name__ == '__main__':
                 offset_x=offset_x,
                 offset_y=offset_y
             )
+
+        for e in field.entities:
+            if e.cool_down:
+                display.draw_entity(screen, e, colour=COOL_DOWN_COLOUR, offset_x=offset_x, offset_y=offset_y)
+            elif e is self:
+                display.draw_entity(screen, e, colour=SELF_COLOUR, offset_x=offset_x, offset_y=offset_y)
+            elif e.target is self:
+                display.draw_entity(screen, e, colour=WEAKNESS_COLOUR, offset_x=offset_x, offset_y=offset_y)
+            elif e is self.target:
+                display.draw_entity(screen, e, colour=TARGET_COLOUR, offset_x=offset_x, offset_y=offset_y)
+            else:
+                display.draw_entity(screen, e, colour=OTHER_COLOUR, offset_x=offset_x, offset_y=offset_y)
 
 
         text_surface = font.render(f'Score: {field.players[SELF_INDEX].score}/{field.score}', False, (0xff, 0xff, 0xff))

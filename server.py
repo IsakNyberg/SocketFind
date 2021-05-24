@@ -16,11 +16,15 @@ print("UDP server up and listening")
 
 
 def flood(connections, bytes_to_send):
-    for address in connections:
-        UDPServerSocket.sendto(bytes_to_send, address)
+    try:
+        for i in range(len(connections)):
+            bytes_to_send += i.to_bytes(1, 'big')
+            UDPServerSocket.sendto(bytes_to_send, connections[i])
+    except IndexError:
+        print('Index error in flood')
 
 
-def game_thread(field, connections):
+def game_thread(field, connections, connections_ttl):
     tick = 0
     clock = pygame.time.Clock()
     while 1:
@@ -30,11 +34,21 @@ def game_thread(field, connections):
         if tick % 8 == 0:
             flood(connections, field.to_bytes())
 
+        for i in range(len(connections_ttl)):
+            if connections_ttl[i] < 0:
+                del connections[i]
+                del connections_ttl[i]
+                field.remove(i)
+                break
+            else:
+                connections_ttl[i] -= 1
+
 
 if __name__ == '__main__':
     connections = []
+    connections_ttl = []
     field = Field()
-    thread = Thread(target=game_thread, args=(field, connections, ))
+    thread = Thread(target=game_thread, args=(field, connections, connections_ttl, ))
     thread.start()
     while len(connections) < 255:
         bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
@@ -43,17 +57,11 @@ if __name__ == '__main__':
 
         if address not in connections:
             connections.append(address)
+            connections_ttl.append(2000)
             field.new_player()
-            index = len(connections) - 1
-        else:
-            index = connections.index(address)
 
-        if message == b'0x00':
-            UDPServerSocket.sendto(index.to_bytes(1, byteorder='big'), address)
-
+        index = connections.index(address)
+        connections_ttl[index] = 2000
         field.steer(index, message[0] - 1, message[1] - 1)
         flood(connections, field.to_bytes())
-        # clientMsg = "Message from Client:{}".format(message)
-        # clientIP = "Client IP Address:{}".format(address)
-        # print(clientMsg)
-        # print(clientIP)
+
