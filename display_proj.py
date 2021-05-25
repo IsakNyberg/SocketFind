@@ -14,12 +14,13 @@ WEAKNESS_COLOUR = '#cc4781'
 OTHER_COLOUR = '#6c55e0'
 COOL_DOWN_COLOUR = '#fff78a'
 
-FOV = 140
+FOV = 100
 DEG_PER_COL = 1
 
 factory = lambda x: M([[math.cos(x), -math.sin(x)], [math.sin(x), math.cos(x)]])
-directions = map(math.radians, range(-FOV//2, 1+FOV//2, DEG_PER_COL))
-rot_mats = list(map(factory, directions))
+phis = tuple(map(math.radians, range(-FOV//2, 1+FOV//2, DEG_PER_COL)))
+coss = tuple(map(math.cos, phis))
+rot_mats = tuple(map(factory, phis))
 
 
 def draw_world(screen, field, player, screen_size):
@@ -29,16 +30,17 @@ def draw_world(screen, field, player, screen_size):
     screen_mid = screen_size//2
     dark_mult = 0.6/MAX_POSITION
 
-    for i, rot_mat in enumerate(rot_mats):
+    for i, (cos, rot_mat) in enumerate(zip(coss, rot_mats)):
         ray = rot_mat @ view
         dist = field.cast_ray_at_wall(pos, ray)
         col_height = screen_size
         if dist > 50:
-            col_height = min(screen_size, screen_size*50//dist)
+            col_height = screen_size*50 / (dist*cos)
+            col_height = min(screen_size, col_height)
         dark = 1 - dist*dark_mult
         col = pygame.Rect(
             i*col_width,
-            screen_mid-col_height//2,
+            screen_mid - col_height/2,
             col_width,
             col_height,
         )
