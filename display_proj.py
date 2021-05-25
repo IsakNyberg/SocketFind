@@ -14,6 +14,15 @@ WEAKNESS_COLOUR = '#cc4781'
 OTHER_COLOUR = '#6c55e0'
 COOL_DOWN_COLOUR = '#fff78a'
 
+LIGHT_MIN = 0.4  # between 0 and 0.5, do NOT put 0.5 or higher here please
+LIGHT_HALF_LIFE = 700
+
+# light intensity: f(x) = a/(x^2+b) + c
+LIGHT_C = LIGHT_MIN
+LIGHT_B = LIGHT_HALF_LIFE**2 * (1 - 2*LIGHT_C)  # maths checks out, I promise
+LIGHT_A = LIGHT_B * (1-LIGHT_C)
+DARKENER = lambda x: LIGHT_A/(x**2 + LIGHT_B) + LIGHT_C
+
 FOV = 100
 DEG_PER_COL = 1
 
@@ -33,11 +42,9 @@ def draw_world(screen, field, player, screen_size):
     for i, (cos, rot_mat) in enumerate(zip(coss, rot_mats)):
         ray = rot_mat @ view
         dist = field.cast_ray_at_wall(pos, ray)
-        col_height = screen_size
-        if dist > 50:
-            col_height = screen_size*50 / (dist*cos)
-            col_height = min(screen_size, col_height)
-        dark = 1 - dist*dark_mult
+        depth = dist * cos
+        col_height = min(screen_size, screen_size * 50 / depth)
+        dark = DARKENER(dist)
         col = pygame.Rect(
             i*col_width - 1,  # add overlap
             screen_mid - col_height/2,
