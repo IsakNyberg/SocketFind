@@ -39,9 +39,9 @@ def draw_world(screen, field, player, screen_size):
             col_height = min(screen_size, col_height)
         dark = 1 - dist*dark_mult
         col = pygame.Rect(
-            i*col_width,
+            i*col_width - 1,  # add overlap
             screen_mid - col_height/2,
-            col_width,
+            col_width + 2,  # add overlap
             col_height,
         )
         pygame.draw.rect(screen, tuple(map(dark.__mul__, WALL_COLOUR)), col)
