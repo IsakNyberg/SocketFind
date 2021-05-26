@@ -20,6 +20,7 @@ def draw_world(screen, offset_x=0, offset_y=0):
 
 def draw_entity(screen, entity, colour=OTHER_COLOUR, offset_x=0, offset_y=0, mini=False):
     mult = 0.1 if mini else 1
+    colour = colour.to_list()
 
     x = (entity.position[0] - offset_x) * mult
     y = (entity.position[1] - offset_y) * mult

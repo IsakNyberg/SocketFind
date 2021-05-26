@@ -5,6 +5,7 @@ import socket
 from threading import Thread
 from field import *
 import display, display_proj
+from matrix import Vector as V
 
 serverAddressPort = ('85.229.18.138', 63834)
 serverAddressPort = ('localhost', 63834)
@@ -12,11 +13,11 @@ bufferSize = 1024
 
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPClientSocket.settimeout(1)
-SELF_COLOUR = '#1cff91'
-TARGET_COLOUR = '#19ffc1'
-WEAKNESS_COLOUR = '#cc4781'
-OTHER_COLOUR = '#6c55e0'
-COOL_DOWN_COLOUR = '#fff78a'
+SELF_COLOUR = V([0x1c, 0xff, 0x91])
+TARGET_COLOUR = V([0x19, 0xff, 0xc1])
+WEAKNESS_COLOUR = V([0xcc, 0x47, 0x81])
+OTHER_COLOUR = V([0x6c, 0x55, 0xe0])
+COOL_DOWN_COLOUR = V([0xff, 0xf7, 0x8a])
 TIMEOUT = 0
 SCREEN_SIZE = 800
 SELF_INDEX = -1
@@ -151,7 +152,11 @@ if __name__ == '__main__':
             elif e is self.target:
                 colour = TARGET_COLOUR
 
-            DISPLAY.draw_entity(screen, e, colour=colour, offset_x=offset_x, offset_y=offset_y)
+            if DISPLAY_ID == 1:
+                DISPLAY.draw_entity(screen, e, colour=colour, offset_x=offset_x, offset_y=offset_y)
+            elif DISPLAY_ID == 2:
+                display.draw_entity(screen, e, colour=colour, offset_x=offset_x, offset_y=offset_y, mini=True)
+                DISPLAY.draw_entity(screen, e, colour, SCREEN_SIZE, self)
 
         text_surface = font.render(f'Score: {field.players[SELF_INDEX].score}/{field.score}', False, (0xff, 0xff, 0xff))
         screen.blit(text_surface, (10, 10))
