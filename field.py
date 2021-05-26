@@ -66,22 +66,18 @@ class Entity:
 
     def wall_bounce(self):
         bounce = False
-        if self.position[0] + self.size > MAX_POSITION:
-            self.velocity[0] = -MAX_VELOCITY
+        if self.position[0] + self.size > MAX_POSITION or self.position[0] - self.size < 0:
+            self.velocity[0] *= -1
             self.direction[0] *= -1
-            bounce = True
-        elif self.position[0] - self.size < 0:
-            self.velocity[0] = MAX_VELOCITY
-            self.direction[0] *= -1
+            """self.velocity *= Vector([-1, 1])
+            self.direction *= Vector([-1, 1])"""
             bounce = True
 
-        if self.position[1] + self.size > MAX_POSITION:
-            self.velocity[1] = -MAX_VELOCITY
+        if self.position[1] + self.size > MAX_POSITION or self.position[1] - self.size < 0:
+            self.velocity[1] *= -1
             self.direction[1] *= -1
-            bounce = True
-        elif self.position[1] - self.size < 0:
-            self.velocity[1] = MAX_VELOCITY
-            self.direction[1] *= -1
+            """self.velocity *= Vector([1, -1])
+            self.direction *= Vector([1, -1])"""
             bounce = True
         return bounce
 
@@ -124,6 +120,9 @@ class Player(Entity):
     @property
     def front(self):
         return self.points - self.damage
+
+    def get_dist_squared(self, pos):
+        return (self.position - pos).length_squared
 
     def steer(self, turn, forward):
         if turn < 0:  # clockwise
@@ -172,11 +171,10 @@ class Player(Entity):
         if len(players) < MIN_PLAYERS:
             return self
 
-        """if all(player.target == self for player in players):
-            self.target = players[random.randint(0, len(players) - 1)]"""
-        tries = 0
-        while self.target == self or (self.target.target is self and tries < len(players) * 2):
+        tries = 0 if MIN_PLAYERS < len(players) else len(players)
+        while self.target == self or (self.target.target is self and tries < len(players)):
             self.target = players[random.randint(0, len(players)-1)]
+            tries += 1
         return self.target
 
     def ball_bounce(self, other):
@@ -210,6 +208,9 @@ class Field:
     def entities(self):
         return self.players
 
+    def get_players_by_dist(self, pos):
+        return self.players.sort(key=lambda x: x.get_dist_squared(pos), reverse=True)
+
     def mutex_wait(self):
         while self.mutex:
             pass
@@ -225,9 +226,9 @@ class Field:
         entity.set_position(x, y)
         self.players.append(entity)
         self.status.append(JOIN)
-        if len(self.players) == MIN_PLAYERS:
+        if len(self.players) >= MIN_PLAYERS:
             self.new_targets()
-        print('join', len(self.players))
+        return entity
 
     def remove(self, index):
         self.status.append(JOIN)
@@ -235,7 +236,6 @@ class Field:
         for i in range(len(self.players)):
             self.players[i].name = i
         self.new_targets()
-        print('leave', len(self.players))
 
     def new_targets(self):
         self.status.append(POINT_COLLISION)
