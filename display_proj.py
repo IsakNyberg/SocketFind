@@ -1,4 +1,5 @@
 import math
+from multiprocessing import Pool
 
 import pygame
 from matrixx import Matrix as M, Vector as V
@@ -10,15 +11,15 @@ from field import MAX_POSITION
 DISPLAY_ID = 2
 
 BACKGROUND = '#111111'
-WALL_COLOUR = V([0x36, 0x36, 0x36])
+WALL_COLOUR = V((0x36, 0x36, 0x36))
 
 SELF_COLOUR = '#1cff91'
 WEAKNESS_COLOUR = '#cc4781'
 OTHER_COLOUR = '#6c55e0'
 COOL_DOWN_COLOUR = '#fff78a'
 
-DARK_TILE = WALL_COLOUR
-LITE_TILE = V([0x66, 0x66, 0x66])#V([0x33, 0x33, 0x33])
+DARK_TILE = V((0x20, 0x3c, 0x1e))
+LITE_TILE = DARK_TILE * 1.2
 
 SCREEN_SIZE = 800
 
@@ -54,7 +55,7 @@ _SCREEN_MID = SCREEN_SIZE // 2
 # 1) Calculate distance between camera and view plane (view_dist):
 #       view_dist = SS / ( 2tan(vFOV/2) )
 # 2) Calculate vertical angle (theta) given height on screen/view plane (y)
-#       theta = -atan( (SS/2 - y) / view_dist )
+#       theta = atan( (SS/2 - y) / view_dist )
 # 3) Calculate depth of world point given vertical angle theta
 #       depth = SS / ( 2 tan theta )
 #             = SS / ( 2 ( (SS/2 - y) / view_dist ))
@@ -64,7 +65,7 @@ _SCREEN_MID = SCREEN_SIZE // 2
 # 5) Calculate x, y position of floor point given position, ray and distance
 #       x, y = pos + dist * ray
 
-FLOOR_ROW_COUNT = 100
+FLOOR_ROW_COUNT = 50
 SCREEN_SIZE = 800
 V_FOV_D = 90
 _V_FOV_R = math.radians(V_FOV_D)
@@ -72,7 +73,7 @@ _VIEW_PLANE_DIST = SCREEN_SIZE / (2 * math.tan(0.5 * _V_FOV_R))
 _FLOOR_ROW_HEIGHT = 0.5 * SCREEN_SIZE / FLOOR_ROW_COUNT
 _FLOOR_ROW_HEIGHT_DRAW = _FLOOR_ROW_HEIGHT + 1
 _FLOOR_SAMPLE_HEIGHT_BORDERS = tuple(
-    i * _FLOOR_ROW_HEIGHT for i in range(FLOOR_ROW_COUNT + 1)
+    SCREEN_SIZE - i*_FLOOR_ROW_HEIGHT for i in range(FLOOR_ROW_COUNT + 1)
 )
 _FLOOR_ROW_POSITIONS = tuple(_FLOOR_SAMPLE_HEIGHT_BORDERS[1:-1])
     # skip the first bc it's zero
@@ -92,18 +93,18 @@ _FLOOR_ROW_DEPTHS = tuple(
 _FLOOR_ROW_COLUMN_DISTS = tuple(
     tuple(depth/cos for cos in _H_ANGLE_COSINES)
     for depth in _FLOOR_ROW_DEPTHS
-)  # this is huge
+)  # final result (this is huge)
+_FLOOR_ROW_COLUMN_SHADERS = tuple(
+    tuple(_DARKENER(dist) for dist in row)
+    for row in _FLOOR_ROW_COLUMN_DISTS
+)  # overkill, but we have more memory than processing speed so might as well
 
-FLOOR_CHECKERBOARD_SIZE = 200
+FLOOR_CHECKERBOARD_SIZE = 500
 _FLOOR_CHECKERBOARD = lambda x, y: (x//FLOOR_CHECKERBOARD_SIZE + y//FLOOR_CHECKERBOARD_SIZE) % 2
 
 
-def angle_to_coord(screen_size, x_rad, y_rad):
-    # takes radian angles from forward vector (middle of screen)
-    # positive angles go to top right
-    x = screen_size * (x_rad*_FOV_R_INV + 0.5)
-    y = screen_size * (y_rad*_V_FOV_R_INV - 0.5)
-    return x, y
+def xy_nonvec_calc(dist, pos_x, pos_y, ray_x, ray_y):
+    return pos_x + dist*ray_x, pos_y + dist*ray_y
 
 
 def draw_world(screen, field, player, screen_size):
@@ -117,15 +118,26 @@ def draw_world(screen, field, player, screen_size):
     wall_dists = tuple(field.cast_ray_at_wall(pos, ray) for ray in rays)
 
     # calc & draw floor
-    for i, dists in enumerate(_FLOOR_ROW_COLUMN_DISTS):  # i is which row
+    floor_positions = None
+    with Pool(2) as pool:
+        floor_positions = pool.starmap(
+            xy_nonvec_calc,
+            tuple(
+                (dist, *pos._value, *ray._value)
+                for dists in _FLOOR_ROW_COLUMN_DISTS
+                for dist, ray in zip(dists, rays)
+            )
+        )
+    for i, dists in enumerate(_FLOOR_ROW_COLUMN_DISTS):
         for j, dist in enumerate(dists):  # j is which col
-            # if -dist > wall_dists[j]: continue  # TODO
-            x, y = pos - dist*rays[j]  # TODO: why are dists negative?
+            #if dist > wall_dists[j]: continue  # TODO
+            x, y = floor_positions[101*i+j]  # TODO iterate over flat tuple?
+            dark = _FLOOR_ROW_COLUMN_SHADERS[i][j]
             floor_colour = LITE_TILE if _FLOOR_CHECKERBOARD(x, y) else DARK_TILE
-            floor_colour = (floor_colour * _DARKENER(dist))._value
+            floor_colour = (floor_colour * dark)._value  # TODO: precompute colour
             sq = pygame.Rect(
                 _COLUMN_POSITIONS[j],
-                800-_FLOOR_ROW_POSITIONS[i],  # TODO: why is the floor on the ceiling?
+                _FLOOR_ROW_POSITIONS[i],  # TODO: why is the floor on the ceiling?
                 _COLUMN_WIDTH_DRAW,
                 _FLOOR_ROW_HEIGHT_DRAW,
             )
