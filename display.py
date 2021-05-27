@@ -1,6 +1,9 @@
-import pygame
 import math
+
+import pygame
+
 from field import *
+
 
 DISPLAY_ID = 1
 

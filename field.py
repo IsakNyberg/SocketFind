@@ -1,9 +1,9 @@
 import random
-from struct import pack, unpack
 import math
-from operator import not_
+from struct import pack, unpack
 
 from matrix import Vector, Matrix
+
 
 MAX_ACCELERATION = 1
 ACCELERATION_FRACTION = 30

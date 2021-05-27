@@ -1,12 +1,11 @@
-import pygame
 import math
-import random
+
+import pygame
+
 import display
-import bisect
-import time
-from operator import mul
 from field import MAX_POSITION
 from matrix import Matrix as M, Vector as V
+
 
 DISPLAY_ID = 2
 
@@ -95,7 +94,6 @@ _FLOOR_ROW_COLUMN_DISTS = tuple(
     for depth in _FLOOR_ROW_DEPTHS
 )  # this is huge
 
-print(len(_FLOOR_ROW_COLUMN_DISTS), len(_FLOOR_ROW_COLUMN_DISTS[0]))
 FLOOR_CHECKERBOARD_SIZE = 200
 _FLOOR_CHECKERBOARD = lambda x, y: (x//FLOOR_CHECKERBOARD_SIZE + y//FLOOR_CHECKERBOARD_SIZE) % 2
 

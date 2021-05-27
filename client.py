@@ -1,11 +1,13 @@
 import time
-
-import pygame
 import socket
 from threading import Thread
+
+import pygame
+
 from field import *
 import display, display_proj
 from matrix import Vector as V
+
 
 serverAddressPort = ('85.229.18.138', 63834)
 serverAddressPort = ('localhost', 63834)
@@ -23,7 +25,7 @@ SCREEN_SIZE = 800
 SELF_INDEX = -1
 
 # toggle this between display and display_proj
-DISPLAY = display_proj
+DISPLAY = display
 DISPLAY_ID = DISPLAY.DISPLAY_ID
 
 

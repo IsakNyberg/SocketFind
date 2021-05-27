@@ -1,11 +1,12 @@
 import time
-
-import pygame
 import socket
 from threading import Thread
 
+import pygame
 
 from field import *
+
+
 localIP = ""
 localPort = 63834
 bufferSize = 1024
