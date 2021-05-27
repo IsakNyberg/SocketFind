@@ -4,6 +4,7 @@ import random
 import display
 import bisect
 import time
+from operator import mul
 from field import MAX_POSITION
 from matrix import Matrix as M, Vector as V
 
@@ -20,6 +21,8 @@ COOL_DOWN_COLOUR = '#fff78a'
 DARK_TILE = WALL_COLOUR
 LITE_TILE = V([0x66, 0x66, 0x66])#V([0x33, 0x33, 0x33])
 
+SCREEN_SIZE = 800
+
 # light
 LIGHT_MIN = 0.4  # between 0 and 0.5, do NOT put 0.5 or higher here please
 LIGHT_HALF_LIFE = 700
@@ -30,93 +33,71 @@ _DARKENER = lambda x: _LIGHT_A/(x**2 + _LIGHT_B) + _LIGHT_C
 
 # walls
 FOV_D = 100  # deg
-DEG_PER_COL = 2
+DEG_PER_COL = 1
 WALL_HEIGHT_MULTIPLIER = 50
 ENTITY_HEIGHT = 0.7  # relative to a wall
 _FOV_R = math.radians(FOV_D)
 _FOV_R_INV = 1 / _FOV_R
 _FOV_R_HALF = 0.5 * _FOV_R
-factory = lambda x: M([[math.cos(x), -math.sin(x)], [math.sin(x), math.cos(x)]])
-phis = tuple(map(math.radians, range(-FOV_D//2, 1 + FOV_D//2, DEG_PER_COL)))
-coss = tuple(map(math.cos, phis))
-rot_mats = tuple(map(factory, phis))
+_ROTATION_MATR_MAKER = lambda x: M([[math.cos(x), -math.sin(x)], [math.sin(x), math.cos(x)]])
+_HORIZONTAL_ANGLES = tuple(map(math.radians, range(-FOV_D//2, 1 + FOV_D//2, DEG_PER_COL)))
+_H_ANGLE_COSINES = tuple(map(math.cos, _HORIZONTAL_ANGLES))
+_H_ANGLE_MAT_ROTATORS = tuple(map(_ROTATION_MATR_MAKER, _HORIZONTAL_ANGLES))
+_COLUMN_COUNT = len(_H_ANGLE_MAT_ROTATORS)  # TODO: make this togglable, remove DEG_PER_COL
+_COLUMN_WIDTH = SCREEN_SIZE / _COLUMN_COUNT
+_COLUMN_WIDTH_DRAW = _COLUMN_WIDTH + 1
+_COLUMN_POSITIONS = tuple(i * _COLUMN_WIDTH for i in range(FOV_D // DEG_PER_COL +1))
+_SCREEN_MID = SCREEN_SIZE // 2
 
-# floor
-V_FOV_D = 90  # deg
-FLOOR_LINE_COUNT = 100
-FLOOR_CHECKERBOARD_SIZE = 500
-FLOOR_CAMERA_HEIGHT = 100
-FLOOR_SAMPLING_ANGLE = 0.01  # rad
+
+# Floor maths:
+# Inputs: screen size (SS), vertical FOV (vFOV)
+# 1) Calculate distance between camera and view plane (view_dist):
+#       view_dist = SS / ( 2tan(vFOV/2) )
+# 2) Calculate vertical angle (theta) given height on screen/view plane (y)
+#       theta = -atan( (SS/2 - y) / view_dist )
+# 3) Calculate depth of world point given vertical angle theta
+#       depth = SS / ( 2 tan theta )
+#             = SS / ( 2 ( (SS/2 - y) / view_dist ))
+#             = (SS * dist) / (2y - SS)
+# 4) Calculate distance to floor point given its depth and horizontal angle phi
+#       dist = depth / cos phi
+# 5) Calculate x, y position of floor point given position, ray and distance
+#       x, y = pos + dist * ray
+
+FLOOR_ROW_COUNT = 100
+SCREEN_SIZE = 800
+V_FOV_D = 90
 _V_FOV_R = math.radians(V_FOV_D)
-_V_FOV_R_INV = 1 / _V_FOV_R
-_V_FOV_R_HALF = 0.5 * _V_FOV_R
-_LOWEST_ANGLE_M = -_V_FOV_R_HALF  # between bottom of screen and horizontal
-_LOWEST_ANGLE_B = 0.5*math.pi - _V_FOV_R_HALF  # same but with vertical
-_FLOOR_CAMERA_HEIGHT_INV = 1 / FLOOR_CAMERA_HEIGHT
-_FLOOR_SAMPLING_ANGLE_INV = 1 / FLOOR_SAMPLING_ANGLE
-_FLOOR_SAMPLING_PARTIAL_DISTANCES = [
-    FLOOR_CAMERA_HEIGHT * math.tan(_LOWEST_ANGLE_B + i*FLOOR_SAMPLING_ANGLE)
-    for i in range(1+int(_V_FOV_R_HALF / FLOOR_SAMPLING_ANGLE))
-]  # distance to sampling point for every angle (starting with lowest)
-_FLOOR_CHECKERBOARD = lambda x, y: (x//FLOOR_CHECKERBOARD_SIZE + y//FLOOR_CHECKERBOARD_SIZE) % 5  # TODO change back to 2
-_FLOOR_LINE_COUNT_INV = 1 / FLOOR_LINE_COUNT
-_FLOOR_CHECKERBOARD_COLOURS_1 = {
-    0: '#ff0000',
-    1: '#00ff00',
-    2: '#0000ff',
-    3: '#ff00ff',
-    4: '#00ffff',
-}
-_FLOOR_CHECKERBOARD_COLOURS_2 = {
-    0: '#75507b',
-    1: '#f57900',
-    2: '#ad7fa8',
-    3: '#4e9a06',
-    4: '#8f5902',
-}
-_FLOOR_CHECKERBOARD_COLOURS_3 = {
-    0: '#000000',
-    1: '#528783',
-    2: '#140658',
-    3: '#346048',
-    4: '#918563',
-}
-
-_FLOOR_2_SAMPLING_INTERDISTNACES = [
-    _FLOOR_SAMPLING_PARTIAL_DISTANCES[i+1] - _FLOOR_SAMPLING_PARTIAL_DISTANCES[i]
-    for i in range(len(_FLOOR_SAMPLING_PARTIAL_DISTANCES)-1)
-]
-_FLOOR_2_SAMPLING_MIDPOINTS = [
-    0.5 * (_FLOOR_SAMPLING_PARTIAL_DISTANCES[i+1] + _FLOOR_SAMPLING_PARTIAL_DISTANCES[i])
-    for i in range(len(_FLOOR_SAMPLING_PARTIAL_DISTANCES)-1)
-]
-
-_FLOOR_3_SCREEN_SIZE = 800  # TODO think of a better way to get this number
-_FLOOR_3_SCREEN_SIZE_HALF = _FLOOR_3_SCREEN_SIZE // 2
-
-FLOOR_3_V_FOV_D = 90  # deg
-_FLOOR_3_V_FOV_R = math.radians(FLOOR_3_V_FOV_D)
-FLOOR_3_ROW_COUNT = 50  # how many rows on bottom half of screen
-#FLOOR_3_VIEW_PLANE_DIST = 10  # units TODO: extract this value from vert FOV
-_FLOOR_3_DIST_TO_VIEW_PLANE = _FLOOR_3_SCREEN_SIZE_HALF / math.tan(_FLOOR_3_V_FOV_R / 2)
-
-_FLOOR_3_SCREEN_HEIGHT_TO_V_ANGLE = lambda y: math.atan(
-    (_FLOOR_3_SCREEN_SIZE_HALF - y) / _FLOOR_3_DIST_TO_VIEW_PLANE
-)  # this gives the positive angle without direction
-_FLOOR_3_ROW_HEIGHTS = _FLOOR_3_SCREEN_SIZE_HALF / FLOOR_3_ROW_COUNT
-_FLOOR_3_ROW_BOUNDARY_ANGLES = tuple(map(
-    _FLOOR_3_SCREEN_HEIGHT_TO_V_ANGLE,
-    (
-        i*_FLOOR_3_ROW_HEIGHTS
-        for i in range(FLOOR_3_ROW_COUNT)
-    )
-))
-_FLOOR_3_SAMPLING_DEPTHS = tuple(
-    0.5 * (_FLOOR_3_ROW_BOUNDARY_ANGLES[i] + _FLOOR_3_ROW_BOUNDARY_ANGLES[i-1])
-    for i in range(1, len(_FLOOR_3_ROW_BOUNDARY_ANGLES))
+_VIEW_PLANE_DIST = SCREEN_SIZE / (2 * math.tan(0.5 * _V_FOV_R))
+_FLOOR_ROW_HEIGHT = 0.5 * SCREEN_SIZE / FLOOR_ROW_COUNT
+_FLOOR_ROW_HEIGHT_DRAW = _FLOOR_ROW_HEIGHT + 1
+_FLOOR_SAMPLE_HEIGHT_BORDERS = tuple(
+    i * _FLOOR_ROW_HEIGHT for i in range(FLOOR_ROW_COUNT + 1)
 )
+_FLOOR_ROW_POSITIONS = tuple(_FLOOR_SAMPLE_HEIGHT_BORDERS[1:-1])
+    # skip the first bc it's zero
+    # skip the last bc it's SS/2 which causes DBZ
+'''_FLOOR_SAMPLE_HEIGHT_MIDPOINTS = tuple(
+    0.5 * (_FLOOR_SAMPLE_HEIGHT_BORDERS[i-1] + _FLOOR_SAMPLE_HEIGHT_BORDERS[i])
+    for i in range(1, len(_FLOOR_SAMPLE_HEIGHT_BORDERS))
+)
+_FLOOR_ROW_DEPTHS = tuple(
+    (SCREEN_SIZE - 2*y) / (SCREEN_SIZE * _VIEW_PLANE_DIST)
+    for y in _FLOOR_SAMPLE_HEIGHT_MIDPOINTS
+)'''  # TODO
+_FLOOR_ROW_DEPTHS = tuple(
+    (SCREEN_SIZE * _VIEW_PLANE_DIST) / (2*y - SCREEN_SIZE)
+    for y in _FLOOR_ROW_POSITIONS
+)
+_FLOOR_ROW_COLUMN_DISTS = tuple(
+    tuple(depth/cos for cos in _H_ANGLE_COSINES)
+    for depth in _FLOOR_ROW_DEPTHS
+)  # this is huge
 
-
+print(len(_FLOOR_ROW_COLUMN_DISTS), len(_FLOOR_ROW_COLUMN_DISTS[0]))
+FLOOR_CHECKERBOARD_SIZE = 200
+_FLOOR_CHECKERBOARD = lambda x, y: (x//FLOOR_CHECKERBOARD_SIZE + y//FLOOR_CHECKERBOARD_SIZE) % 2
 
 
 def angle_to_coord(screen_size, x_rad, y_rad):
@@ -132,116 +113,44 @@ def draw_world(screen, field, player, screen_size):
     #screen.fill("#203c1e", (0, screen_size//2, screen_size, screen_size//2))
     #screen.fill('#0000ff')
     pos, view = player.position, player.direction
-    col_width = screen_size / len(rot_mats)
-    col_width_draw = col_width + 1  # for overlap
-    screen_mid = screen_size // 2
+    rays = [rot_mat @ view for rot_mat in _H_ANGLE_MAT_ROTATORS]
 
-    for i, (cos, rot_mat) in enumerate(zip(coss, rot_mats)):
-        # wall
-        ray = rot_mat @ view
-        dist = field.cast_ray_at_wall(pos, ray)
+    # calc walls
+    wall_dists = tuple(field.cast_ray_at_wall(pos, ray) for ray in rays)
+
+    # calc & draw floor
+    for i, dists in enumerate(_FLOOR_ROW_COLUMN_DISTS):  # i is which row
+        for j, dist in enumerate(dists):  # j is which col
+            # if -dist > wall_dists[j]: continue  # TODO
+            x, y = pos - dist*rays[j]  # TODO: why are dists negative?
+            floor_colour = LITE_TILE if _FLOOR_CHECKERBOARD(x, y) else DARK_TILE
+            floor_colour = (floor_colour * _DARKENER(dist)).to_list()
+            sq = pygame.Rect(
+                _COLUMN_POSITIONS[j],
+                800-_FLOOR_ROW_POSITIONS[i],  # TODO: why is the floor on the ceiling?
+                _COLUMN_WIDTH_DRAW,
+                _FLOOR_ROW_HEIGHT_DRAW,
+            )
+            pygame.draw.rect(screen, floor_colour, sq)
+
+    # draw walls
+    for j, (dist, cos) in enumerate(zip(wall_dists, _H_ANGLE_COSINES)):
         depth = dist * cos
         wall_height = min(
-            screen_size * WALL_HEIGHT_MULTIPLIER / depth,
-            screen_size,
+            SCREEN_SIZE * WALL_HEIGHT_MULTIPLIER / depth,
+            SCREEN_SIZE,
         )
-        x_pos = i * col_width
-        col_top = screen_mid - wall_height * 0.5
+        col_top = _SCREEN_MID - wall_height * 0.5
         wall = pygame.Rect(
-            x_pos,
+            _COLUMN_POSITIONS[j],
             col_top,
-            col_width_draw,
+            _COLUMN_WIDTH_DRAW,
             wall_height,
         )
         dark_mult = _DARKENER(dist)
         wall_colour = (dark_mult * WALL_COLOUR).to_list()
 
         pygame.draw.rect(screen, wall_colour, wall)
-        if not col_top:
-            continue  # don't draw floor if wall takes up screen
-
-
-        # checkerboard floor
-        '''floor = [(None, 0)]  # list of tuples: tuples (colour, units)
-        units_total = 0
-        #cur_pos = pos.copy()  # TODO
-        for i, dist_to_midpoint in enumerate(_FLOOR_2_SAMPLING_MIDPOINTS):
-            cur_pos = pos + dist_to_midpoint * ray
-            x, y = cur_pos
-            #floor_colour = LITE_TILE if _FLOOR_CHECKERBOARD(x, y) else DARK_TILE
-            #floor_colour = floor_colour.to_list()
-            floor_colour = _FLOOR_CHECKERBOARD_COLOURS_1[_FLOOR_CHECKERBOARD(x, y)]
-            #floor_colour = floor_colour * _DARKENER(dist_to_midpoint)
-            last_colour, last_units = floor[-1]
-            if last_colour == floor_colour:
-                floor[-1] = (last_colour, last_units+1)
-            else:
-                floor.append((floor_colour, 1))
-            units_total += 1
-            if dist_to_midpoint > dist:
-                break
-        cur_top = screen_size
-        step_top = col_top / units_total
-        for floor_colour, floor_units in floor[1:]:
-            height = floor_units * step_top
-            cur_top -= height
-            sq = pygame.Rect(x_pos, cur_top-1, col_width_draw, height+1)
-            pygame.draw.rect(screen, floor_colour, sq)'''
-
-        # ALSO WORKS!
-        '''if col_top and (sampling_count:=bisect.bisect(_FLOOR_SAMPLING_PARTIAL_DISTANCES, dist)):
-            # don't draw floor if wall took whole screen
-            cur_top = screen_size
-            step_top = col_top / sampling_count
-            wall_bottom = col_top + wall_height
-            cur_pos = pos.copy()
-
-            for j in range(1, int(sampling_count) + 2):
-                top = screen_size - j*step_top
-                dist_to_point = _FLOOR_SAMPLING_PARTIAL_DISTANCES[j]
-                dist_since_last = dist_to_point - _FLOOR_SAMPLING_PARTIAL_DISTANCES[j-1]
-                cur_pos += dist_since_last * ray
-                x, y = cur_pos
-                floor_colour = _FLOOR_CHECKERBOARD_COLOURS_2[_FLOOR_CHECKERBOARD(x, y)]
-                #floor_colour = LITE_TILE if _FLOOR_CHECKERBOARD(x, y) else DARK_TILE
-                #floor_colour = floor_colour * _DARKENER(dist_to_point)
-                sq = pygame.Rect(x_pos, top, col_width_draw, step_top + 1)
-                pygame.draw.rect(screen, floor_colour, sq)
-                if top < wall_bottom: break'''
-
-        
-        '''total_theta = math.atan(dist * _FLOOR_CAMERA_HEIGHT_INV) - _LOWEST_ANGLE_B
-            # angle between lower FOV and to bottom of wall
-        sampling_count = total_theta * _FLOOR_SAMPLING_ANGLE_INV  # add ceil
-        cur_top = screen_size
-        step_top = col_top / sampling_count
-        wall_bottom = col_top + wall_height
-        cur_pos = pos.copy()
-
-        for j in range(1, int(sampling_count) + 2):
-            top = screen_size - j*step_top
-            dist_to_point = _FLOOR_SAMPLING_PARTIAL_DISTANCES[j]
-            dist_since_last = dist_to_point - _FLOOR_SAMPLING_PARTIAL_DISTANCES[j-1]
-            cur_pos += dist_since_last * ray
-            x, y = cur_pos
-            floor_colour = _FLOOR_CHECKERBOARD_COLOURS_3[_FLOOR_CHECKERBOARD(x, y)]
-            ##floor_colour = LITE_TILE if _FLOOR_CHECKERBOARD(x, y) else DARK_TILE
-            #floor_colour = floor_colour * _DARKENER(dist_to_point)
-            sq = pygame.Rect(x_pos, top, col_width_draw, step_top + 1)
-            pygame.draw.rect(screen, floor_colour, sq)
-            if top < wall_bottom: break'''
-
-        
-        
-        
-    '''
-    print(t_first, t_second, t_third)
-    5.093006372451782
-    4.449524164199829
-    4.2408607006073'''
-
-        # draw wall after floor
-        # pygame.draw.rect(screen, wall_colour, wall)
 
 
 def draw_entity(screen, entity, colour, screen_size, player):
