@@ -1,10 +1,10 @@
 import math
 
 import pygame
+from matrixx import Matrix as M, Vector as V
 
 import display
 from field import MAX_POSITION
-from matrix import Matrix as M, Vector as V
 
 
 DISPLAY_ID = 2
@@ -122,7 +122,7 @@ def draw_world(screen, field, player, screen_size):
             # if -dist > wall_dists[j]: continue  # TODO
             x, y = pos - dist*rays[j]  # TODO: why are dists negative?
             floor_colour = LITE_TILE if _FLOOR_CHECKERBOARD(x, y) else DARK_TILE
-            floor_colour = (floor_colour * _DARKENER(dist)).to_list()
+            floor_colour = (floor_colour * _DARKENER(dist))._value
             sq = pygame.Rect(
                 _COLUMN_POSITIONS[j],
                 800-_FLOOR_ROW_POSITIONS[i],  # TODO: why is the floor on the ceiling?
@@ -146,7 +146,7 @@ def draw_world(screen, field, player, screen_size):
             wall_height,
         )
         dark_mult = _DARKENER(dist)
-        wall_colour = (dark_mult * WALL_COLOUR).to_list()
+        wall_colour = (dark_mult * WALL_COLOUR)._value
 
         pygame.draw.rect(screen, wall_colour, wall)
 
@@ -184,7 +184,7 @@ def draw_entity(screen, entity, colour, screen_size, player):
     bot = screen_size//2 + wall_height//2
     top = bot - entity_height
 
-    colour = (_DARKENER(dist) * colour).to_list()
+    colour = (_DARKENER(dist) * colour)._value
 
     pygame.draw.polygon(screen, colour, [
         (exposition + x_offset, bot),

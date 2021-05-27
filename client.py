@@ -3,10 +3,10 @@ import socket
 from threading import Thread
 
 import pygame
+from matrixx import Vector as V
 
 from field import *
 import display, display_proj
-from matrix import Vector as V
 
 
 serverAddressPort = ('85.229.18.138', 63834)

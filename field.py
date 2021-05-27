@@ -2,7 +2,7 @@ import random
 import math
 from struct import pack, unpack
 
-from matrix import Vector, Matrix
+from matrixx import Vector, Matrix
 
 
 MAX_ACCELERATION = 1
@@ -41,9 +41,9 @@ def limit_zero(n, lim):
 class Entity:
     def __init__(self, name, x=MAX_POSITION // 2, y=MAX_POSITION // 2):
         self.name = name
-        self.position = Vector([x, y])
-        self.velocity = Vector([0, 0])
-        self.direction = Vector([0.0, 0.0])
+        self.position = Vector((x, y))
+        self.velocity = Vector((0, 0))
+        self.direction = Vector((0.0, 0.0))
         self._size = SIZE
 
     @property
@@ -54,30 +54,26 @@ class Entity:
         if x == -1 and y == -1:
             x = random.randint(self.size, MAX_POSITION - self.size)
             y = random.randint(self.size, MAX_POSITION - self.size)
-        vector = Vector([limit_zero(x, MAX_POSITION), limit_zero(y, MAX_POSITION)])
+        vector = Vector((limit_zero(x, MAX_POSITION), limit_zero(y, MAX_POSITION)))
         self.position = vector
 
     def set_velocity(self, x=-1, y=-1):
         if x == -1 and y == -1:
             x = random.randint(-MAX_POSITION, MAX_POSITION)
             y = random.randint(-MAX_POSITION, MAX_POSITION)
-        vector = Vector([x, y])
+        vector = Vector((x, y))
         self.velocity = vector.limit(MAX_VELOCITY)
 
     def wall_bounce(self):
         bounce = False
         if self.position[0] + self.size > MAX_POSITION or self.position[0] - self.size < 0:
-            self.velocity[0] *= -1
-            self.direction[0] *= -1
-            """self.velocity *= Vector([-1, 1])
-            self.direction *= Vector([-1, 1])"""
+            self.velocity *= Vector((-1, 1))
+            self.direction *= Vector((-1, 1))
             bounce = True
 
         if self.position[1] + self.size > MAX_POSITION or self.position[1] - self.size < 0:
-            self.velocity[1] *= -1
-            self.direction[1] *= -1
-            """self.velocity *= Vector([1, -1])
-            self.direction *= Vector([1, -1])"""
+            self.velocity *= Vector((1, -1))
+            self.direction *= Vector((1, -1))
             bounce = True
         return bounce
 
@@ -106,7 +102,7 @@ class Player(Entity):
         self.damage = 0
         self.points = 0
         self.acceleration = 0
-        self.direction = Vector([1.0, 0.0])
+        self.direction = Vector((1.0, 0.0))
         self.cool_down = 0
 
     @property
@@ -126,9 +122,9 @@ class Player(Entity):
 
     def steer(self, turn, forward):
         if turn < 0:  # clockwise
-            rotation_matrix = Matrix([[Player.cos, Player.sin], [-Player.sin, Player.cos]])
+            rotation_matrix = Matrix(((Player.cos, Player.sin), (-Player.sin, Player.cos)))
         elif turn > 0:  # anti clockwise
-            rotation_matrix = Matrix([[Player.cos, -Player.sin], [Player.sin, Player.cos]])
+            rotation_matrix = Matrix(((Player.cos, -Player.sin), (Player.sin, Player.cos)))
         else:
             rotation_matrix = None
 
@@ -317,33 +313,35 @@ class Field:
         while players > len(self.players):
             self.new_player()
 
-        for i in range(players):
-            self.players[i].position[0] = unpack('f', received_bytes[i * s + 0: i * s + 4])[0]
-            self.players[i].position[1] = unpack('f', received_bytes[i * s + 4: i * s + 8])[0]
-            self.players[i].direction[0] = unpack('f', received_bytes[i * s + 8: i * s + 12])[0]
-            self.players[i].direction[1] = unpack('f', received_bytes[i * s + 12: i * s + 16])[0]
-            self.players[i].velocity[0] = unpack('f', received_bytes[i * s + 16: i * s + 20])[0]
-            self.players[i].velocity[1] = unpack('f', received_bytes[i * s + 20: i * s + 24])[0]
-            self.players[i].acceleration = unpack('f', received_bytes[i * s + 24: i * s + 28])[0]
-            self.players[i].target = self.players[received_bytes[i * s + 28]]
-            self.players[i].damage = received_bytes[i * s + 29]
-            self.players[i].points = received_bytes[i * s + 30]
-            self.players[i].cool_down = received_bytes[i * s + 31]
+        for i, player in enumerate(self.players):
+            float_offsets = (0, 4, 8, 12, 16, 20, 24, 28)
+            pos_x, pos_y, dir_x, dir_y, vel_x, vel_y, player.acceleration = (
+                unpack('f', received_bytes[i * s + start: i * s + end])[0]
+                for start, end in zip(float_offsets, float_offsets[1:])
+            )
+            player.position = Vector((pos_x, pos_y))
+            player.direction = Vector((dir_x, dir_y))
+            player.velocity = Vector((vel_x, vel_y))
+
+            target_id, player.damage, player.points, player.cool_down = (
+                received_bytes[i * s + pos] for pos in (28, 29, 30, 31)
+            )
+            player.target = self.players[target_id]
         self.mutex = 0
 
     def to_bytes(self):
         res = bytearray()
-        for i in range(len(self.players)):
-            res += pack('f', self.players[i].position[0])
-            res += pack('f', self.players[i].position[1])
-            res += pack('f', self.players[i].direction[0])
-            res += pack('f', self.players[i].direction[1])
-            res += pack('f', self.players[i].velocity[0])
-            res += pack('f', self.players[i].velocity[1])
-            res += pack('f', self.players[i].acceleration)
-            res += self.players[i].target.name.to_bytes(1, 'big')
-            res += self.players[i].damage.to_bytes(1, 'big')
-            res += self.players[i].points.to_bytes(1, 'big')
-            res += self.players[i].cool_down.to_bytes(1, 'big')
+        for player in self.players:
+            res += pack('f', player.position[0])
+            res += pack('f', player.position[1])
+            res += pack('f', player.direction[0])
+            res += pack('f', player.direction[1])
+            res += pack('f', player.velocity[0])
+            res += pack('f', player.velocity[1])
+            res += pack('f', player.acceleration)
+            res += player.target.name.to_bytes(1, 'big')
+            res += player.damage.to_bytes(1, 'big')
+            res += player.points.to_bytes(1, 'big')
+            res += player.cool_down.to_bytes(1, 'big')
 
         return res
