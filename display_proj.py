@@ -1,5 +1,6 @@
 import math
 from multiprocessing import Pool
+from itertools import starmap
 
 import pygame
 from matrixx import Matrix as M, Vector as V
@@ -20,6 +21,7 @@ COOL_DOWN_COLOUR = '#fff78a'
 
 DARK_TILE = V((0x20, 0x3c, 0x1e))
 LITE_TILE = DARK_TILE * 1.2
+IMAGE = pygame.image.load("resources/bg2.jpg")
 
 SCREEN_SIZE = 800
 
@@ -69,7 +71,9 @@ FLOOR_ROW_COUNT = 50
 SCREEN_SIZE = 800
 V_FOV_D = 90
 _V_FOV_R = math.radians(V_FOV_D)
-_VIEW_PLANE_DIST = SCREEN_SIZE / (2 * math.tan(0.5 * _V_FOV_R))
+_VIEW_PLANE_DIST = SCREEN_SIZE / (2 * math.tan(0.5 * _V_FOV_R)) * 0.1
+    # TODO: the maths does NOT account for the 0.1, but for some reason
+    # it makes the image way more correct. Figure it oot
 _FLOOR_ROW_HEIGHT = 0.5 * SCREEN_SIZE / FLOOR_ROW_COUNT
 _FLOOR_ROW_HEIGHT_DRAW = _FLOOR_ROW_HEIGHT + 1
 _FLOOR_SAMPLE_HEIGHT_BORDERS = tuple(
@@ -103,6 +107,7 @@ FLOOR_CHECKERBOARD_SIZE = 500
 _FLOOR_CHECKERBOARD = lambda x, y: (x//FLOOR_CHECKERBOARD_SIZE + y//FLOOR_CHECKERBOARD_SIZE) % 2
 
 
+
 def xy_nonvec_calc(dist, pos_x, pos_y, ray_x, ray_y):
     return pos_x + dist*ray_x, pos_y + dist*ray_y
 
@@ -119,7 +124,7 @@ def draw_world(screen, field, player, screen_size):
 
     # calc & draw floor
     floor_positions = None
-    with Pool(2) as pool:
+    '''with Pool(2) as pool:
         floor_positions = pool.starmap(
             xy_nonvec_calc,
             tuple(
@@ -127,14 +132,25 @@ def draw_world(screen, field, player, screen_size):
                 for dists in _FLOOR_ROW_COLUMN_DISTS
                 for dist, ray in zip(dists, rays)
             )
-        )
+        )'''  # multiprocessing version
+    floor_positions = tuple(starmap(
+        xy_nonvec_calc,
+        tuple(
+            (dist, *pos._value, *ray._value)
+            for dists in _FLOOR_ROW_COLUMN_DISTS
+            for dist, ray in zip(dists, rays)
+        )  # TODO: fix distances and skip big ones here
+    ))
     for i, dists in enumerate(_FLOOR_ROW_COLUMN_DISTS):
-        for j, dist in enumerate(dists):  # j is which col
-            #if dist > wall_dists[j]: continue  # TODO
-            x, y = floor_positions[101*i+j]  # TODO iterate over flat tuple?
-            dark = _FLOOR_ROW_COLUMN_SHADERS[i][j]
-            floor_colour = LITE_TILE if _FLOOR_CHECKERBOARD(x, y) else DARK_TILE
-            floor_colour = (floor_colour * dark)._value  # TODO: precompute colour
+        for j, dist in enumerate(dists):
+            #if dist > wall_dists[j]: continue  # TODO fix distances so this works
+            x, y = floor_positions[len(rays)*i + j]  # TODO iterate over flat tuple?
+            if x<0 or y<0 or x>2000 or y>2000:
+                continue  # TODO: make this nicer
+            #dark = _FLOOR_ROW_COLUMN_SHADERS[i][j]
+            #floor_colour = LITE_TILE if _FLOOR_CHECKERBOARD(x, y) else DARK_TILE
+            #floor_colour = (floor_colour * dark)._value
+            floor_colour = IMAGE.get_at((int(x), int(y)))
             sq = pygame.Rect(
                 _COLUMN_POSITIONS[j],
                 _FLOOR_ROW_POSITIONS[i],  # TODO: why is the floor on the ceiling?
@@ -145,6 +161,8 @@ def draw_world(screen, field, player, screen_size):
 
     # draw walls
     for j, (dist, cos) in enumerate(zip(wall_dists, _H_ANGLE_COSINES)):
+        # TODO: change walls to same geometric system as floor
+        # wall_xy = xy_nonvec_calc(dist, *pos._value, *rays[j]._value)
         depth = dist * cos
         wall_height = min(
             SCREEN_SIZE * WALL_HEIGHT_MULTIPLIER / depth,

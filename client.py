@@ -25,7 +25,7 @@ SCREEN_SIZE = 800
 SELF_INDEX = -1
 
 # toggle this between display and display_proj
-DISPLAY = display
+DISPLAY = display_proj
 DISPLAY_ID = DISPLAY.DISPLAY_ID
 
 
