@@ -11,6 +11,7 @@ TURN_angle = 2  # 120 * this many degrees per second
 FRICTION = 0.99
 MAX_VELOCITY = 4
 MAX_POSITION = 2000
+MAX_POSITION = 800
 SIZE = 20
 GRAVITY_FRACTION = 70
 
@@ -43,6 +44,7 @@ class Entity:
         self.name = name
         self.position = Vector((x, y))
         self.velocity = Vector((0, 0))
+        self.velocity = Vector((1, 0))
         self.direction = Vector((0.0, 0.0))
         self._size = SIZE
 
@@ -65,6 +67,7 @@ class Entity:
         self.velocity = vector.limit(MAX_VELOCITY)
 
     def wall_bounce(self):
+        # TODO FIX THIS
         bounce = False
         if self.position[0] + self.size > MAX_POSITION or self.position[0] - self.size < 0:
             self.velocity *= Vector((-1, 1))
@@ -156,8 +159,8 @@ class Player(Entity):
             if self.target is other and not self.cool_down:
                 self.points += 1
                 other.damage += 1
-                self.cool_down = 255
-                other.cool_down = 255
+                self.cool_down = 0xff
+                other.cool_down = 0xff
                 return 2
             return 1
         return 0

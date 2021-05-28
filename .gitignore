@@ -3,4 +3,4 @@
 *.pyc
 venv/
 .idea/
-*.py
+test.py
