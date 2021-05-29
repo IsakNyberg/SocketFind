@@ -2,7 +2,7 @@ import math
 import time
 from statistics import mean
 from multiprocessing import Pool, get_context
-from itertools import starmap
+from itertools import starmap, cycle
 
 import pygame
 from matrixx import Matrix as M, Vector as V, M2
@@ -21,7 +21,7 @@ V_FOV_D = 90 # deg
 COLUMN_COUNT = 100
 ROW_COUNT = 50  # floor only
 FLOOR_CHECKERBOARD_SIZE = 200
-FLOOR_STYLE = 'image'  # change this string
+FLOOR_STYLE = 'checkerboard'  # change this string
 FLOOR_USE_MP = False  # multiprocessing
 
 
@@ -46,9 +46,9 @@ _FLOOR_CHECKERBOARD_COLOURS = (DARK_TILE, LITE_TILE)
 _FLOOR_COLOUR = {
     'checkerboard': lambda x, y: _FLOOR_CHECKERBOARD_COLOURS[
         int(x//FLOOR_CHECKERBOARD_SIZE + y//FLOOR_CHECKERBOARD_SIZE) % 2
-    ],
+    ]._value,
     'image': lambda x, y: IMAGE.get_at((int(x), int(y))),
-    'plain': lambda x, y: DARK_TILE,
+    'plain': lambda x, y: DARK_TILE._value,
 }[FLOOR_STYLE]
 
 
@@ -127,8 +127,9 @@ _ROW_DEPTHS = (
     for y in _ROW_MIDPOINTS
 )
 _FLOOR_PIXEL_DISTS = tuple(
-    tuple(depth / cos for cos in _COLUMN_COSINES)
+    depth / cos
     for depth in _ROW_DEPTHS
+    for cos in _COLUMN_COSINES
 )  # final result (this is huge)
 _FLOOR_RECTS = tuple(
     pygame.Rect(
@@ -140,11 +141,8 @@ _FLOOR_RECTS = tuple(
     for i in range(ROW_COUNT)
     for j in range(COLUMN_COUNT)
 )  # not sure how much time this actually saves
-_FLOOR_SHADING = tuple(
-    _DARKENER(dist)
-    for dists in _FLOOR_PIXEL_DISTS
-    for dist in dists
-)
+_FLOOR_SHADING = tuple(_DARKENER(dist) for dist in _FLOOR_PIXEL_DISTS)
+    # TODO: add shading to floor in a nice way
 
 print(f'3d precomp finished in {round(time.time()-_t, 3)}s')
 
@@ -162,8 +160,7 @@ def draw_world(screen, field, player, screen_size):
     floor_positions = None
     flat_input_data = tuple(
         (dist, *pos._value, *ray._value)
-        for dists in _FLOOR_PIXEL_DISTS
-        for dist, ray in zip(dists, rays)
+        for dist, ray in zip(_FLOOR_PIXEL_DISTS, cycle(rays))
     )
     if FLOOR_USE_MP:
         with get_context('fork').Pool(2) as pool:
@@ -176,7 +173,7 @@ def draw_world(screen, field, player, screen_size):
         if x<0 or y<0 or x>2000 or y>2000: continue  # TODO: make this nicer
         pygame.draw.rect(
             screen,
-            _FLOOR_COLOUR(x, y),# * _FLOOR_SHADING[i])._value,
+            _FLOOR_COLOUR(x, y),
             _FLOOR_RECTS[i],
         )
 
@@ -185,7 +182,7 @@ def draw_world(screen, field, player, screen_size):
         dist = field.cast_ray_at_wall(pos, ray)
         depth = dist * cos
         wall_height = min(
-            50 * SCREEN_SIZE / depth,  # TODO: magic number multiplier
+            40 * SCREEN_SIZE / depth,  # TODO: magic number multiplier
             SCREEN_SIZE,
         )
         col_top = _SCREEN_MID - 0.5 * wall_height
