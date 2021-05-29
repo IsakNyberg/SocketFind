@@ -8,9 +8,9 @@ from matrixx import Vector, Matrix
 MAX_ACCELERATION = 1
 ACCELERATION_FRACTION = 30
 TURN_angle = 2  # 120 * this many degrees per second
-FRICTION = 0.99
-MAX_VELOCITY = 4
-MAX_POSITION = 2000
+FRICTION = 0.99  # set this to 0.99
+MAX_VELOCITY = 1  # set this to 4
+MAX_POSITION = 800
 SIZE = 20
 GRAVITY_FRACTION = 70
 
@@ -66,17 +66,30 @@ class Entity:
         self.velocity = vector.limit(MAX_VELOCITY)
 
     def wall_bounce(self):
-        # TODO FIX THIS
         bounce = False
-        if self.position[0] + self.size > MAX_POSITION or self.position[0] - self.size < 0:
-            self.velocity *= Vector((-1, 1))
+        x_pos = self.position[0]
+        y_pos = self.position[1]
+        size = self.size
+        if x_pos + size > MAX_POSITION:
+            self.velocity += Vector((MAX_POSITION - (x_pos + size), 0))
+            self.direction *= Vector((-1, 1))
+            bounce = True
+        elif x_pos - size < 0:
+            self.velocity += Vector((-x_pos + size, 0))
             self.direction *= Vector((-1, 1))
             bounce = True
 
-        if self.position[1] + self.size > MAX_POSITION or self.position[1] - self.size < 0:
-            self.velocity *= Vector((1, -1))
+        if y_pos + size > MAX_POSITION:
+            self.velocity += Vector((0, MAX_POSITION - (y_pos + size)))
             self.direction *= Vector((1, -1))
             bounce = True
+        elif y_pos - size < 0:
+            self.velocity += Vector((0, -y_pos + size))
+            self.direction *= Vector((1, -1))
+            bounce = True
+
+        if bounce:
+            self.velocity.limit(MAX_VELOCITY)
         return bounce
 
     def gravity(self, mass):
@@ -135,7 +148,7 @@ class Player(Entity):
             self.direction = self.direction.unit
 
         if forward < 0:
-            self.velocity *= FRICTION ** 6
+            self.velocity *= 0.9
         elif forward > 0:
             self.acceleration = 1
         else:
@@ -155,10 +168,10 @@ class Player(Entity):
         dist_squared = (self.position - other.position).length_squared
         if dist_squared < (self.size + other.size) ** 2:
             self.ball_bounce(other)
-            if self.target is other and not self.cool_down:
+            if self.target is other and not other.cool_down:
                 self.points += 1
                 other.damage += 1
-                self.cool_down = 0xff
+                # self.cool_down = 0xff  when you tag you don't go on cool down
                 other.cool_down = 0xff
                 return 2
             return 1
@@ -182,6 +195,7 @@ class Player(Entity):
             self.velocity = new_velocity * new_length
             other.velocity = new_velocity * -new_length
         except ZeroDivisionError:
+            print('Zero division in ball collision.')
             pass
 
 
