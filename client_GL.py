@@ -1,19 +1,15 @@
-import time
 import socket
 from math import cos, sin, pi
 from threading import Thread
 
-import OpenGL
+import OpenGL  # not used but i don't dare removing it
 from OpenGL.GL import *
 from OpenGL.GLUT import *
-from OpenGL.GLU import *
+from OpenGL.GLU import *  # not used but i don't dare removing it
 
 from matrixx import Vector as V
-import pygame
 
 from field import *
-import display
-import display_proj
 
 print('Import successful.')
 
