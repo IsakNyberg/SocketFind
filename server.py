@@ -13,6 +13,7 @@ bufferSize = 1024
 msgFromServer = "Hello UDP Client"
 
 NUM_BOTS = 0
+MAX_TTL = 2000
 
 bytesToSend = str.encode(msgFromServer)
 UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
@@ -70,14 +71,13 @@ if __name__ == '__main__':
         bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
         message = bytesAddressPair[0]
         address = bytesAddressPair[1]
-
         if address not in connections:
             connections.append(address)
-            connections_ttl.append(2000)
+            connections_ttl.append(MAX_TTL)
             field.new_player()
 
         index = connections.index(address)
-        connections_ttl[index] = 2000
+        connections_ttl[index] = MAX_TTL
         field.steer(index + NUM_BOTS, message[0] - 1, message[1] - 1)
 
         for i in range(len(connections_ttl)):
