@@ -11,7 +11,6 @@ TURN_angle = 2  # 120 * this many degrees per second
 FRICTION = 0.99
 MAX_VELOCITY = 4
 MAX_POSITION = 2000
-MAX_POSITION = 800
 SIZE = 20
 GRAVITY_FRACTION = 70
 
@@ -254,6 +253,7 @@ class Field:
             ((MAX_POSITION, MAX_POSITION), (0, MAX_POSITION)),
             ((MAX_POSITION, MAX_POSITION), (MAX_POSITION, 0)),
             ((MAX_POSITION/2, MAX_POSITION/2), (MAX_POSITION/2, 0)),  # del me
+            ((MAX_POSITION/2, MAX_POSITION/2), (MAX_POSITION/4, 0)),
         )
         x1, y1 = pos
         x2, y2 = pos + step
