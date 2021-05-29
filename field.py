@@ -38,18 +38,36 @@ def limit_zero(n, lim):
     return max(min(lim, n), 0)
 
 
-class Entity:
+class Player:
+    sin = math.sin(math.radians(TURN_angle))
+    cos = math.cos(math.radians(TURN_angle))
+
     def __init__(self, name, x=MAX_POSITION // 2, y=MAX_POSITION // 2):
         self.name = name
         self.position = Vector((x, y))
         self.velocity = Vector((0, 0))
         self.velocity = Vector((1, 0))
-        self.direction = Vector((0.0, 0.0))
+        self.direction = Vector((1.0, 0.0))
+        self.acceleration = 0
+
         self._size = SIZE
+
+        self.target = self
+        self.damage = 0
+        self.points = 0
+        self.cool_down = 0
+
+    @property
+    def score(self):
+        return self.points - self.damage
 
     @property
     def size(self):
-        return self._size
+        return max(self.score, 0) + SIZE
+
+    @property
+    def front(self):
+        return self.points - self.damage
 
     def set_position(self, x=-1, y=-1):
         if x == -1 and y == -1:
@@ -65,72 +83,10 @@ class Entity:
         vector = Vector((x, y))
         self.velocity = vector.limit(MAX_VELOCITY)
 
-    def wall_bounce(self):
-        bounce = False
-        x_pos = self.position[0]
-        y_pos = self.position[1]
-        size = self.size
-        if x_pos + size > MAX_POSITION:
-            self.velocity += Vector((MAX_POSITION - (x_pos + size), 0))
-            self.direction *= Vector((-1, 1))
-            bounce = True
-        elif x_pos - size < 0:
-            self.velocity += Vector((-x_pos + size, 0))
-            self.direction *= Vector((-1, 1))
-            bounce = True
-
-        if y_pos + size > MAX_POSITION:
-            self.velocity += Vector((0, MAX_POSITION - (y_pos + size)))
-            self.direction *= Vector((1, -1))
-            bounce = True
-        elif y_pos - size < 0:
-            self.velocity += Vector((0, -y_pos + size))
-            self.direction *= Vector((1, -1))
-            bounce = True
-
-        if bounce:
-            self.velocity.limit(MAX_VELOCITY)
-        return bounce
-
-    def gravity(self, mass):
-        acceleration = mass.position - self.position
-        if acceleration.length_squared == 0:
-            return
-        dist_factor = (acceleration.length // GRAVITY_FRACTION ** 2) ** 2
-        self.velocity += acceleration.unit * (1 / (GRAVITY_FRACTION + dist_factor))
-        self.velocity.limit(MAX_VELOCITY)
-
     def move(self):
         self.position += self.velocity
         self.position.limit_zero(MAX_POSITION)
         self.velocity *= FRICTION
-
-
-class Player(Entity):
-    sin = math.sin(math.radians(TURN_angle))
-    cos = math.cos(math.radians(TURN_angle))
-
-    def __init__(self, name):
-        super().__init__(name)
-        self.target = self
-        self.self_index = -1
-        self.damage = 0
-        self.points = 0
-        self.acceleration = 0
-        self.direction = Vector((1.0, 0.0))
-        self.cool_down = 0
-
-    @property
-    def score(self):
-        return self.points - self.damage
-
-    @property
-    def size(self):
-        return max(self.score, 0) + SIZE
-
-    @property
-    def front(self):
-        return self.points - self.damage
 
     def get_dist_squared(self, pos):
         return (self.position - pos).length_squared
@@ -197,6 +153,33 @@ class Player(Entity):
         except ZeroDivisionError:
             print('Zero division in ball collision.')
             pass
+
+    def wall_bounce(self):
+        bounce = False
+        x_pos = self.position[0]
+        y_pos = self.position[1]
+        size = self.size
+        if x_pos + size > MAX_POSITION:
+            self.velocity += Vector((MAX_POSITION - (x_pos + size), 0))
+            self.direction *= Vector((-1, 1))
+            bounce = True
+        elif x_pos - size < 0:
+            self.velocity += Vector((-x_pos + size, 0))
+            self.direction *= Vector((-1, 1))
+            bounce = True
+
+        if y_pos + size > MAX_POSITION:
+            self.velocity += Vector((0, MAX_POSITION - (y_pos + size)))
+            self.direction *= Vector((1, -1))
+            bounce = True
+        elif y_pos - size < 0:
+            self.velocity += Vector((0, -y_pos + size))
+            self.direction *= Vector((1, -1))
+            bounce = True
+
+        if bounce:
+            self.velocity.limit(MAX_VELOCITY)
+        return bounce
 
 
 class Field:
