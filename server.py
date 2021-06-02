@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
         index = connections.index(address)
         connections_ttl[index] = MAX_TTL
-        field.steer(index + NUM_BOTS, message[0] - 1, message[1] - 1)
+        field.steer(index + NUM_BOTS, message[0] - 1, message[1] - 1, message[2])
 
         for i in range(len(connections_ttl)):
             if connections_ttl[i] < 0:

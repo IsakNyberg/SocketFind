@@ -127,9 +127,9 @@ if __name__ == '__main__':
                 sound1.play()
             if s == OTHER_COLLISION:
                 sound2.play()
-            if s == WEAKNESS_COLLISION:
+            if s == SELF_HIT:
                 sound3.play()
-            if s == POINT_COLLISION:
+            if s == TARGET_HIT:
                 sound4.play()
             if s == JOIN:
                 sound5.play()
