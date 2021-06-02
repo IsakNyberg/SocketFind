@@ -8,7 +8,7 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *  # not used but i don't dare removing it
 
 from matrixx import Vector as V
-
+from random import randint as r
 from field import *
 
 print('Import successful.')
@@ -27,13 +27,31 @@ OTHER_COLOUR = V([0x6c, 0x55, 0xe0])
 TIMEOUT = 0
 SCREEN_SIZE = 800
 SELF_INDEX = -1
+
+
+def line(v_start, v_end):
+    glBegin(GL_LINES)
+    glVertex2f(*v_start)
+    glVertex2f(*v_end)
+    glEnd()
+
+
+circle_sides = 3
+CIRCLE_S = tuple((cos(i * 2 * pi / circle_sides), sin(i * 2 * pi / circle_sides)) for i in range(circle_sides))
 circle_sides = 16
-CIRCLE = tuple((cos(i * 2 * pi / circle_sides), sin(i * 2 * pi / circle_sides)) for i in range(circle_sides))
-
-
+CIRCLE_M = tuple((cos(i * 2 * pi / circle_sides), sin(i * 2 * pi / circle_sides)) for i in range(circle_sides))
+circle_sides = 32
+CIRCLE_L = tuple((cos(i * 2 * pi / circle_sides), sin(i * 2 * pi / circle_sides)) for i in range(circle_sides))
 def circle(p_x, p_y, size=30):
     glBegin(GL_POLYGON)
-    for x, y in CIRCLE:  # Circle
+    if size < 10:
+        circumference = CIRCLE_S
+    elif size < 20:
+        circumference = CIRCLE_M
+    else:
+        circumference = CIRCLE_L
+
+    for x, y in circumference:  # Circle
         x = x * size + p_x
         y = y * size + p_y
         glVertex2f(x, y)
@@ -60,13 +78,33 @@ def draw_player(entity, colour, perspective):
         p_y -= y_offset - SCREEN_SIZE // 2
         circle(p_x, p_y, size)
 
-    front_x = p_x + size * entity.direction[0] * 1.5
-    front_y = p_y + size * entity.direction[1] * 1.5
-    o_x, o_y = entity.direction[1] * size * 0.7, entity.direction[0] * size * 0.7
+    front_x = p_x + size * entity.direction[0] * 1.5 + entity.velocity[0] * 3
+    front_y = p_y + size * entity.direction[1] * 1.5 + entity.velocity[1] * 3
+    o_x, o_y = entity.direction[1] * size, entity.direction[0] * size
+
     glBegin(GL_POLYGON)  # Nose
     for x, y in [(p_x - o_x, p_y + o_y), (p_x + o_x, p_y - o_y), (front_x, front_y)]:
         glVertex2f(x, y)
     glEnd()
+
+
+total_stars = 200
+stars = tuple(Vector((r(-300, MAX_POSITION), r(-300, MAX_POSITION))) for _ in range(total_stars))
+def draw_background(field, perspective):
+    glColor3f(0.7, 0.3, 0.4)
+    pos = perspective.position - V((SCREEN_SIZE // 2, SCREEN_SIZE // 2))
+    for start, end in field.walls:
+        start_perspective = start - pos
+        end_perspective = end - pos
+        line(start_perspective.to_tuple(), end_perspective.to_tuple())
+
+    glColor3f(0.8, 0.8, 1)
+    for star in stars:
+        if abs(star[0] - pos[0]) > SCREEN_SIZE:
+            continue
+        elif abs(star[1] - pos[1]) > SCREEN_SIZE:
+            continue
+        circle(*star-(pos*0.5), 2)
 
 
 def iterate():
@@ -84,6 +122,7 @@ def showScreen():
     glLoadIdentity()
     iterate()
     self_ball = field.players[SELF_INDEX]
+    draw_background(field, self_ball)
     for player in field.players:
         if player.cool_down:
             colour = COOL_DOWN_COLOUR
@@ -154,13 +193,15 @@ def client_tick():
             sound5.play()'''
 
     showScreen()
-    '''index = 0
+    '''
+    index = 0
     ai_player = field.players[index]
     target = ai_player.target
     target_dir = (target.position + target.velocity * 60 + target.direction * target.acceleration * 60 - ai_player.position)
     current_dir = ai_player.direction
     direction = int(current_dir[0] * target_dir[1] - current_dir[1] * target_dir[0])
-    field.steer(index, direction, 1)'''
+    field.steer(index, direction, 1)
+    '''
 
 
 def game_thread(field):

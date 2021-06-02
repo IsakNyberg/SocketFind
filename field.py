@@ -10,7 +10,7 @@ ACCELERATION_FRACTION = 30
 TURN_angle = 2  # 120 * this many degrees per second
 FRICTION = 0.99  # set this to 0.99
 MAX_VELOCITY = 1  # set this to 4
-MAX_POSITION = 800
+MAX_POSITION = 2000
 SIZE = 20
 GRAVITY_FRACTION = 70
 
@@ -159,30 +159,38 @@ class Player:
         x_pos = self.position[0]
         y_pos = self.position[1]
         size = self.size
+        spring_factor = 0.001
         if x_pos + size > MAX_POSITION:
-            self.velocity += Vector((MAX_POSITION - (x_pos + size), 0))
-            self.direction *= Vector((-1, 1))
+            self.velocity += Vector((MAX_POSITION - (x_pos + size), 0)) * spring_factor
+            #self.direction *= Vector((-1, 1))
             bounce = True
         elif x_pos - size < 0:
-            self.velocity += Vector((-x_pos + size, 0))
-            self.direction *= Vector((-1, 1))
+            self.velocity += Vector((-x_pos + size, 0)) * spring_factor
+            #self.direction *= Vector((-1, 1))
             bounce = True
 
         if y_pos + size > MAX_POSITION:
-            self.velocity += Vector((0, MAX_POSITION - (y_pos + size)))
-            self.direction *= Vector((1, -1))
+            self.velocity += Vector((0, MAX_POSITION - (y_pos + size))) * spring_factor
+            #self.direction *= Vector((1, -1))
             bounce = True
         elif y_pos - size < 0:
-            self.velocity += Vector((0, -y_pos + size))
-            self.direction *= Vector((1, -1))
+            self.velocity += Vector((0, -y_pos + size)) * spring_factor
+            #self.direction *= Vector((1, -1))
             bounce = True
 
-        if bounce:
-            self.velocity.limit(MAX_VELOCITY)
+        #if bounce:
+        #    self.velocity.limit(MAX_VELOCITY)
         return bounce
 
 
 class Field:
+    walls = (
+        (Vector((0, 0)), Vector((MAX_POSITION, 0))),
+        (Vector((0, 0)), Vector((0, MAX_POSITION))),
+        (Vector((MAX_POSITION, MAX_POSITION)), Vector((MAX_POSITION, 0))),
+        (Vector((MAX_POSITION, MAX_POSITION)), Vector((0, MAX_POSITION))),
+    )
+
     def __init__(self):
         self.players = []
         self.status = []
