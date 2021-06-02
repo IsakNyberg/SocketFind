@@ -43,7 +43,6 @@ CIRCLE_M = tuple((cos(i * 2 * pi / circle_sides), sin(i * 2 * pi / circle_sides)
 circle_sides = 32
 CIRCLE_L = tuple((cos(i * 2 * pi / circle_sides), sin(i * 2 * pi / circle_sides)) for i in range(circle_sides))
 def circle(p_x, p_y, size=30):
-    glBegin(GL_POLYGON)
     if size < 10:
         circumference = CIRCLE_S
     elif size < 20:
@@ -51,6 +50,7 @@ def circle(p_x, p_y, size=30):
     else:
         circumference = CIRCLE_L
 
+    glBegin(GL_POLYGON)
     for x, y in circumference:  # Circle
         x = x * size + p_x
         y = y * size + p_y
@@ -78,14 +78,32 @@ def draw_player(entity, colour, perspective):
         p_y -= y_offset - SCREEN_SIZE // 2
         circle(p_x, p_y, size)
 
-    front_x = p_x + size * entity.direction[0] * 1.5 + entity.velocity[0] * 3
-    front_y = p_y + size * entity.direction[1] * 1.5 + entity.velocity[1] * 3
+    front_x = p_x + size * entity.direction[0] * 1.5 + entity.velocity[0] * 3 * entity.cool_down / 100
+    front_y = p_y + size * entity.direction[1] * 1.5 + entity.velocity[1] * 3 * entity.cool_down / 100
     o_x, o_y = entity.direction[1] * size, entity.direction[0] * size
 
     glBegin(GL_POLYGON)  # Nose
     for x, y in [(p_x - o_x, p_y + o_y), (p_x + o_x, p_y - o_y), (front_x, front_y)]:
         glVertex2f(x, y)
     glEnd()
+
+
+def draw_projectile(projectile, perspective):
+    offset = perspective.position - Vector((SCREEN_SIZE // 2, SCREEN_SIZE // 2))
+    x_offset = perspective.position[0]
+    y_offset = perspective.position[1]
+
+    p_x = projectile.position[0]
+    p_y = projectile.position[1]
+    if abs(p_x - x_offset) > SCREEN_SIZE:
+        return  # yes grisha i know that the else is no needed but i think it adds clarity
+    if abs(p_y - y_offset) > SCREEN_SIZE:
+        return
+    else:
+        start = (projectile.position + projectile.velocity*5 - offset)
+        end = (projectile.position - projectile.velocity*5 - offset)
+        glColor3f(0.9, 0.5, 0.1)
+        line(start.to_tuple(), end.to_tuple())
 
 
 total_stars = 200
@@ -123,6 +141,8 @@ def showScreen():
     iterate()
     self_ball = field.players[SELF_INDEX]
     draw_background(field, self_ball)
+    for projectile in field.projectiles:
+        draw_projectile(projectile, self_ball)
     for player in field.players:
         if player.cool_down:
             colour = COOL_DOWN_COLOUR
@@ -139,7 +159,7 @@ def showScreen():
     glutSwapBuffers()
 
 
-KEYS_PRESSED = [0, 0, 0, 0]  # wasd
+KEYS_PRESSED = [0, 0, 0, 0, 0]  # wasd e
 def key_down(*args):
     global KEYS_PRESSED
     if args[0].lower() == b'w':
@@ -150,6 +170,8 @@ def key_down(*args):
         KEYS_PRESSED[2] = 1
     if args[0].lower() == b'd':
         KEYS_PRESSED[3] = 1
+    if args[0].lower() == b'e':
+        KEYS_PRESSED[4] = 1
 
 
 def key_up(*args):
@@ -162,6 +184,8 @@ def key_up(*args):
         KEYS_PRESSED[2] = 0
     if args[0].lower() == b'd':
         KEYS_PRESSED[3] = 0
+    if args[0].lower() == b'e':
+        KEYS_PRESSED[4] = 0
 
 
 def client_tick():
@@ -172,11 +196,13 @@ def client_tick():
 
     forward = KEYS_PRESSED[0] - KEYS_PRESSED[2]
     turn = KEYS_PRESSED[1] - KEYS_PRESSED[3]
-    field.steer(SELF_INDEX, turn, forward)
-    data = bytearray(2)
+    shoot = KEYS_PRESSED[4]
+    field.steer(SELF_INDEX, turn, forward, shoot)
+    data = bytearray(3)
     data[0] = turn + 1
     data[1] = forward + 1
-    if forward or turn:
+    data[2] = shoot
+    if forward or turn or shoot:
         UDPClientSocket.sendto(data, serverAddressPort)
 
     status = field.tick(SELF_INDEX)
@@ -185,9 +211,9 @@ def client_tick():
             sound1.play()
         if s == OTHER_COLLISION:
             sound2.play()
-        if s == WEAKNESS_COLLISION:
+        if s == SELF_HIT:
             sound3.play()
-        if s == POINT_COLLISION:
+        if s == TARGET_HIT:
             sound4.play()
         if s == JOIN:
             sound5.play()'''
