@@ -144,6 +144,7 @@ class Field:
             for entity_b in self.players:
                 if entity_b.target in hit_players:
                     entity_b.new_target(self.players)
+                    entity_b.points += 1
                 if entity_a is entity_b:
                     continue
                 if entity_a.is_colliding(entity_b):
