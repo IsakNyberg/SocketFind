@@ -125,6 +125,13 @@ def draw_background(field, perspective):
         circle(*star-(pos*0.5), 2)
 
 
+def draw_scope(field, perspective):
+    glColor3f(0.9, 0.1, 0.1)
+    start = Vector((SCREEN_SIZE // 2, SCREEN_SIZE // 2))
+    end = start + perspective.direction*(SCREEN_SIZE//2)
+    line(start, end)
+
+
 def iterate():
     glViewport(0, 0, SCREEN_SIZE, SCREEN_SIZE)
     glMatrixMode(GL_PROJECTION)
@@ -141,6 +148,7 @@ def showScreen():
     iterate()
     self_ball = field.players[SELF_INDEX]
     draw_background(field, self_ball)
+    draw_scope(field, self_ball)
     for projectile in field.projectiles:
         draw_projectile(projectile, self_ball)
     for player in field.players:
