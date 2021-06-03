@@ -243,9 +243,9 @@ def game_thread(field):
                 TIMEOUT = 0
         except socket.timeout:
             if TIMEOUT == 0:
-                print('timeout')
+                print('timeout', end='d')
             else:
-                print('.', end='')
+                server_connect(field)
             SELF_INDEX = -1
             TIMEOUT += 1
 
