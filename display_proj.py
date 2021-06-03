@@ -250,5 +250,8 @@ def draw_entity(screen, entity, colour, screen_size, player):
     #pygame.draw.circle(screen, colour, (exposition, screen_size/2), size)
 
 
+def draw_projectile(*args, **kwargs):
+    # TODO
+    pass
 
 
