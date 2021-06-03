@@ -224,7 +224,6 @@ class Player(Entity):
             self.velocity += Vector((0, -y_pos + size)) * spring_factor
             #self.direction *= Vector((1, -1))
             bounce = True
-
         #if bounce:
         #    self.velocity.limit(MAX_VELOCITY)
         return bounce

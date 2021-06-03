@@ -31,7 +31,7 @@ def ai_thread(field, index):
         target_dir = (target.position + target.velocity*60 + target.direction*target.acceleration*60 - ai_player.position)
         current_dir = ai_player.direction
         direction = int(current_dir[0] * target_dir[1] - current_dir[1] * target_dir[0])
-        shoot = 1 if random.randint(0, 500) == 100 else 0
+        shoot = 1 if random.randint(0, 250) == 100 else 0
         field.steer(index, direction, 1, shoot)
         time.sleep(0.01)
 
@@ -80,7 +80,8 @@ if __name__ == '__main__':
 
         index = connections.index(address)
         connections_ttl[index] = MAX_TTL
-        field.steer(index + NUM_BOTS, message[0] - 1, message[1] - 1, message[2])
+        if len(message) == 3:
+            field.steer(index + NUM_BOTS, message[0] - 1, message[1] - 1, message[2])
 
         for i in range(len(connections_ttl)):
             if connections_ttl[i] < 0:
