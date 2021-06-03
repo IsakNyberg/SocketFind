@@ -12,6 +12,7 @@ SELF_COLOUR = '#1cff91'
 WEAKNESS_COLOUR = '#cc4781'
 OTHER_COLOUR = '#6c55e0'
 COOL_DOWN_COLOUR = '#fff78a'
+PROJECTILE_COLOUR = '#e0303a'
 BG = pygame.image.load("resources/bg2.jpg")
 MINI_OFFSET = 100
 
@@ -50,4 +51,18 @@ def draw_entity(screen, entity, colour=OTHER_COLOUR, offset_x=0, offset_y=0, min
         pygame.draw.circle(screen, colour, (x, y), size - 10)
 
 
+def draw_projectile(screen, projectile, x_offset=0, y_offset=0):
+    colour = PROJECTILE_COLOUR
+    offset = Vector((x_offset, y_offset))
+
+    p_x = projectile.position[0]
+    p_y = projectile.position[1]
+    if abs(p_x - x_offset) > 800:
+        return  # yes Grisha i know that the else is no needed but i think it adds clarity
+    if abs(p_y - y_offset) > 800:
+        return
+    else:
+        start = (projectile.position + projectile.velocity*5 - offset)
+        end = (projectile.position - projectile.velocity*5 - offset)
+        pygame.draw.line(screen, colour, start.to_tuple(), end.to_tuple())
 

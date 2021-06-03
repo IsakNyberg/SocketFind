@@ -25,7 +25,7 @@ SCREEN_SIZE = 800
 SELF_INDEX = -1
 
 # toggle this between display and display_proj
-DISPLAY = display_proj
+DISPLAY = display#_proj
 DISPLAY_ID = DISPLAY.DISPLAY_ID
 
 
@@ -33,6 +33,7 @@ def get_keys():
     keys = pygame.key.get_pressed()
     turn = 0
     forward = 0
+    shoot = 0
     if keys[pygame.K_w]:
         forward += 1
     if keys[pygame.K_a]:
@@ -41,7 +42,9 @@ def get_keys():
         forward -= 1
     if keys[pygame.K_d]:
         turn += 1
-    return turn, forward
+    if keys[pygame.K_e]:
+        shoot += 1
+    return turn, forward, shoot
 
 
 def game_thread(field):
@@ -112,6 +115,7 @@ if __name__ == '__main__':
         data = bytearray()
         data.append(keys[0]+1)
         data.append(keys[1]+1)
+        data.append(keys[2])
         UDPClientSocket.sendto(data, serverAddressPort)
 
         clock.tick(128)
@@ -124,7 +128,8 @@ if __name__ == '__main__':
         status = field.tick(SELF_INDEX)
         for s in status:
             if s == WALL_COLLISION:
-                sound1.play()
+                #sound1.play()
+                pass
             if s == OTHER_COLLISION:
                 sound2.play()
             if s == SELF_HIT:
@@ -142,6 +147,8 @@ if __name__ == '__main__':
             DISPLAY.draw_world(screen, offset_x=offset_x, offset_y=offset_y)
         elif DISPLAY_ID == 2:
             DISPLAY.draw_world(screen, field, self, SCREEN_SIZE)
+        for p in field.projectiles:
+            DISPLAY.draw_projectile(screen, p, offset_x, offset_y)
 
         for e in field.players:
             colour = OTHER_COLOUR
