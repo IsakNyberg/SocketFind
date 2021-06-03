@@ -1,4 +1,5 @@
 import time
+import random
 import socket
 from threading import Thread
 
@@ -12,7 +13,7 @@ localPort = 63834
 bufferSize = 1024
 msgFromServer = "Hello UDP Client"
 
-NUM_BOTS = 0
+NUM_BOTS = 3
 MAX_TTL = 2000
 
 bytesToSend = str.encode(msgFromServer)
@@ -30,7 +31,8 @@ def ai_thread(field, index):
         target_dir = (target.position + target.velocity*60 + target.direction*target.acceleration*60 - ai_player.position)
         current_dir = ai_player.direction
         direction = int(current_dir[0] * target_dir[1] - current_dir[1] * target_dir[0])
-        field.steer(index, direction, 1)
+        shoot = 1 if random.randint(0, 500) == 100 else 0
+        field.steer(index, direction, 1, shoot)
         time.sleep(0.01)
 
 
