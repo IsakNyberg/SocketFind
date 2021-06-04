@@ -2,9 +2,13 @@ import socket
 from threading import Thread
 
 from field import *
-import display_GL
+import draw_gl_topdown
+import draw_gl_raycast
 
 print('Import successful.')
+
+disp_mod = draw_gl_topdown
+draw_frame = disp_mod.draw_frame
 
 serverAddressPort = ('85.229.18.138', 63834)
 serverAddressPort = ('localhost', 63834)
@@ -23,9 +27,9 @@ def client_tick():
     while TIMEOUT:
         pass
 
-    forward = display_GL.KEYS_PRESSED[0] - display_GL.KEYS_PRESSED[2]
-    turn = display_GL.KEYS_PRESSED[1] - display_GL.KEYS_PRESSED[3]
-    shoot = display_GL.KEYS_PRESSED[4]
+    forward = draw_gl_topdown.KEYS_PRESSED[0] - draw_gl_topdown.KEYS_PRESSED[2]
+    turn = draw_gl_topdown.KEYS_PRESSED[1] - draw_gl_topdown.KEYS_PRESSED[3]
+    shoot = draw_gl_topdown.KEYS_PRESSED[4]
     field.steer(SELF_INDEX, turn, forward, shoot)
     data = bytearray(3)
     data[0] = turn + 1
@@ -45,7 +49,9 @@ def client_tick():
             sound4.play()
         if s == JOIN:
             sound5.play()'''
-    display_GL.showScreen(field, SELF_INDEX)
+    draw_frame(field, SELF_INDEX)
+    import time
+    time.sleep(1/120)
     '''  AI
     index = 0
     ai_player = field.players[index]
@@ -109,5 +115,5 @@ if __name__ == '__main__':
     thread = Thread(target=game_thread, args=(field,))
     thread.start()
     print('Setting up open GL')
-    display_GL.init(field, SELF_INDEX, client_tick)
+    draw_gl_topdown.init(field, SELF_INDEX, client_tick)
     print('start Game')

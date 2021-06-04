@@ -6,6 +6,7 @@ from OpenGL.GLU import *  # not used but i don't dare removing it
 from math import cos, sin, pi
 from random import randint as r
 
+from draw_gl_basics import draw_line, draw_circle, draw_rect
 from matrixx import Vector as V
 from field import *
 
@@ -17,39 +18,7 @@ OTHER_COLOUR = V([0x6c, 0x55, 0xe0])
 SCREEN_SIZE = 800
 
 
-def line(v_start, v_end):
-    glBegin(GL_LINES)
-    glVertex2f(*v_start)
-    glVertex2f(*v_end)
-    glEnd()
-
-
-circle_sides = 3
-CIRCLE_S = tuple((cos(i * 2 * pi / circle_sides), sin(i * 2 * pi / circle_sides)) for i in range(circle_sides))
-circle_sides = 16
-CIRCLE_M = tuple((cos(i * 2 * pi / circle_sides), sin(i * 2 * pi / circle_sides)) for i in range(circle_sides))
-circle_sides = 32
-CIRCLE_L = tuple((cos(i * 2 * pi / circle_sides), sin(i * 2 * pi / circle_sides)) for i in range(circle_sides))
-def circle(p_x, p_y, size=30):
-    if size < 10:
-        circumference = CIRCLE_S
-    elif size < 20:
-        circumference = CIRCLE_M
-    else:
-        circumference = CIRCLE_L
-
-    glBegin(GL_POLYGON)
-    for x, y in circumference:  # Circle
-        x = x * size + p_x
-        y = y * size + p_y
-        glVertex2f(x, y)
-    glEnd()
-
-
 def draw_player(entity, colour, perspective):
-    r, g, b = (colour * (1 / 255))._value  # colour
-    glColor3f(r, g, b)
-
     x_offset = perspective.position[0]
     y_offset = perspective.position[1]
 
@@ -64,7 +33,7 @@ def draw_player(entity, colour, perspective):
     else:
         p_x -= x_offset - SCREEN_SIZE // 2
         p_y -= y_offset - SCREEN_SIZE // 2
-        circle(p_x, p_y, size)
+        draw_circle(p_x, p_y, 1/255 * colour, size=size)
 
     front_x = p_x + size * entity.direction[0] * 1.5 + entity.velocity[0] * 3 * entity.cool_down / 100
     front_y = p_y + size * entity.direction[1] * 1.5 + entity.velocity[1] * 3 * entity.cool_down / 100
@@ -90,34 +59,34 @@ def draw_projectile(projectile, perspective):
     else:
         start = (projectile.position + projectile.velocity*5 - offset)
         end = (projectile.position - projectile.velocity*5 - offset)
-        glColor3f(0.9, 0.5, 0.1)
-        line(start.to_tuple(), end.to_tuple())
+        draw_line(start.to_tuple(), end.to_tuple(), (0.9, 0.5, 0.1))
 
 
 total_stars = 200
 stars = tuple(Vector((r(-300, MAX_POSITION), r(-300, MAX_POSITION))) for _ in range(total_stars))
 def draw_background(field, perspective):
-    glColor3f(0.7, 0.3, 0.4)
     pos = perspective.position - V((SCREEN_SIZE // 2, SCREEN_SIZE // 2))
     for start, end in field.walls:
         start_perspective = start - pos
         end_perspective = end - pos
-        line(start_perspective.to_tuple(), end_perspective.to_tuple())
+        draw_line(
+            start_perspective.to_tuple(),
+            end_perspective.to_tuple(),
+            (0.7, 0.3, 0.4),
+        )
 
-    glColor3f(0.8, 0.8, 1)
     for star in stars:
         if abs(star[0] - pos[0]) > SCREEN_SIZE:
             continue
         elif abs(star[1] - pos[1]) > SCREEN_SIZE:
             continue
-        circle(*star-(pos*0.5), 2)
+        draw_circle(*star-(pos*0.5), (0.8, 0.8, 1), size=2)
 
 
 def draw_scope(field, perspective):
-    glColor3f(0.9, 0.1, 0.1)
     start = Vector((SCREEN_SIZE // 2, SCREEN_SIZE // 2))
     end = start + perspective.direction*(SCREEN_SIZE//2)
-    line(start, end)
+    draw_line(start, end, (0.9, 0.1, 0.1))
 
 
 def iterate():
@@ -129,11 +98,11 @@ def iterate():
     glLoadIdentity()
 
 
-def showScreen(field, SELF_INDEX):
+def draw_frame(field, index):
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glLoadIdentity()
     iterate()
-    self_ball = field.players[SELF_INDEX]
+    self_ball = field.players[index]
     draw_background(field, self_ball)
     draw_scope(field, self_ball)
     for projectile in field.projectiles:
