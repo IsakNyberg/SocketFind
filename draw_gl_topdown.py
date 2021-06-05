@@ -162,4 +162,4 @@ def init(field, SELF_INDEX, client_tick):
     glutIdleFunc(client_tick)
     glutKeyboardFunc(key_down)
     glutKeyboardUpFunc(key_up)
-    glutMainLoop()    glutMainLoop()
+    glutMainLoop()
