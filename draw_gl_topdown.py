@@ -53,7 +53,7 @@ def draw_projectile(projectile, perspective):
     p_x = projectile.position[0]
     p_y = projectile.position[1]
     if abs(p_x - x_offset) > SCREEN_SIZE:
-        return  # yes Grisha i know that the else is no needed but i think it adds clarity
+        return
     if abs(p_y - y_offset) > SCREEN_SIZE:
         return
     else:
@@ -62,10 +62,12 @@ def draw_projectile(projectile, perspective):
         draw_line(start.to_tuple(), end.to_tuple(), (0.9, 0.5, 0.1))
 
 
-total_stars = 200
-stars = tuple(Vector((r(-300, MAX_POSITION), r(-300, MAX_POSITION))) for _ in range(total_stars))
+total_stars = 100
+parallax = 0.1
+star_min, star_max = int(-SCREEN_SIZE * parallax), int(MAX_POSITION * parallax + SCREEN_SIZE)
+stars = tuple(Vector((r(star_min, star_max), r(star_min, star_max))) for _ in range(total_stars))
 def draw_background(field, perspective):
-    pos = perspective.position - V((SCREEN_SIZE // 2, SCREEN_SIZE // 2))
+    pos = (perspective.position - V((SCREEN_SIZE // 2, SCREEN_SIZE // 2)))
     for start, end in field.walls:
         start_perspective = start - pos
         end_perspective = end - pos
@@ -74,13 +76,13 @@ def draw_background(field, perspective):
             end_perspective.to_tuple(),
             (0.7, 0.3, 0.4),
         )
-
+    pos *= parallax
     for star in stars:
         if abs(star[0] - pos[0]) > SCREEN_SIZE:
             continue
         elif abs(star[1] - pos[1]) > SCREEN_SIZE:
             continue
-        draw_circle(*star-(pos*0.5), (0.8, 0.8, 1), size=2)
+        draw_circle(*star-pos, (0.8, 0.8, 1), size=2)
 
 
 def draw_scope(field, perspective):
@@ -160,4 +162,4 @@ def init(field, SELF_INDEX, client_tick):
     glutIdleFunc(client_tick)
     glutKeyboardFunc(key_down)
     glutKeyboardUpFunc(key_up)
-    glutMainLoop()
+    glutMainLoop()    glutMainLoop()
