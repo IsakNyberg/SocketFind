@@ -7,6 +7,7 @@ from matrixx import Vector as V
 
 from field import *
 import display, display_proj
+from constants import SCREEN_SIZE
 
 
 serverAddressPort = ('85.229.18.138', 63834)
@@ -21,7 +22,6 @@ WEAKNESS_COLOUR = V([0xcc, 0x47, 0x81])
 OTHER_COLOUR = V([0x6c, 0x55, 0xe0])
 COOL_DOWN_COLOUR = V([0xff, 0xf7, 0x8a])
 TIMEOUT = 0
-SCREEN_SIZE = 800
 SELF_INDEX = -1
 
 # toggle this between display and display_proj

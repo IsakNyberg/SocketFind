@@ -1,0 +1,16 @@
+# GAME
+FIELD_SIZE = 2000
+
+
+# DISPLAY
+SCREEN_SIZE = 800
+
+
+# SERVER
+
+
+# CLIENT
+
+
+# COLOURS
+

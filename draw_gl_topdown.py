@@ -8,6 +8,7 @@ from random import randint as r
 
 from draw_gl_basics import draw_line, draw_circle, draw_rect
 from matrixx import Vector as V
+from constants import SCREEN_SIZE, FIELD_SIZE
 from field import *
 
 SELF_COLOUR = V([0xff, 0xb9, 0x17])
@@ -15,7 +16,6 @@ TARGET_COLOUR = V([0x19, 0xff, 0xc1])
 WEAKNESS_COLOUR = V([0xcc, 0x47, 0x81])
 COOL_DOWN_COLOUR = V([0xff, 0xf7, 0x8a])
 OTHER_COLOUR = V([0x6c, 0x55, 0xe0])
-SCREEN_SIZE = 800
 HALF_SCREEN = SCREEN_SIZE // 2
 
 
@@ -58,7 +58,7 @@ def draw_projectile(projectile, perspective):
 
 total_stars = 100
 parallax = 0.3
-star_min, star_max = int(-SCREEN_SIZE * parallax), int(MAX_POSITION * parallax + SCREEN_SIZE)
+star_min, star_max = int(-SCREEN_SIZE * parallax), int(FIELD_SIZE * parallax + SCREEN_SIZE)
 stars = tuple(Vector((r(star_min, star_max), r(star_min, star_max))) for _ in range(total_stars))
 def draw_background(field, perspective):
     pos = (perspective.position - V((HALF_SCREEN, HALF_SCREEN)))

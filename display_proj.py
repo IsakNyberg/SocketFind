@@ -8,7 +8,7 @@ import pygame
 from matrixx import Matrix as M, Vector as V, M2
 
 import display
-from field import MAX_POSITION
+from constants import FIELD_SIZE
 
 
 _t = time.time()

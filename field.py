@@ -16,10 +16,10 @@ JOIN = 1 << 4
 
 class Field:
     walls = (
-        (Vector((0, 0)), Vector((MAX_POSITION, 0))),
-        (Vector((0, 0)), Vector((0, MAX_POSITION))),
-        (Vector((MAX_POSITION, MAX_POSITION)), Vector((MAX_POSITION, 0))),
-        (Vector((MAX_POSITION, MAX_POSITION)), Vector((0, MAX_POSITION))),
+        (Vector((0, 0)), Vector((FIELD_SIZE, 0))),
+        (Vector((0, 0)), Vector((0, FIELD_SIZE))),
+        (Vector((FIELD_SIZE, FIELD_SIZE)), Vector((FIELD_SIZE, 0))),
+        (Vector((FIELD_SIZE, FIELD_SIZE)), Vector((0, FIELD_SIZE))),
     )
 
     def __init__(self):
@@ -58,8 +58,8 @@ class Field:
 
     def new_player(self):
         entity = Player(self, len(self.players))
-        x = random.randint(entity.size, MAX_POSITION - entity.size)
-        y = random.randint(entity.size, MAX_POSITION - entity.size)
+        x = random.randint(entity.size, FIELD_SIZE - entity.size)
+        y = random.randint(entity.size, FIELD_SIZE - entity.size)
         entity.set_position(x, y)
         self.players.append(entity)
         self.status.append(JOIN)
@@ -90,12 +90,12 @@ class Field:
     def cast_ray_at_wall(self, pos, step):
         """Distance to first wall from pos in direction step."""
         walls = (
-            ((0, 0), (0, MAX_POSITION)),
-            ((0, 0), (MAX_POSITION, 0)),
-            ((MAX_POSITION, MAX_POSITION), (0, MAX_POSITION)),
-            ((MAX_POSITION, MAX_POSITION), (MAX_POSITION, 0)),
-            ((MAX_POSITION/2, MAX_POSITION/2), (MAX_POSITION/2, 0)),  # del me
-            ((MAX_POSITION/2, MAX_POSITION/2), (MAX_POSITION/4, 0)),
+            ((0, 0), (0, FIELD_SIZE)),
+            ((0, 0), (FIELD_SIZE, 0)),
+            ((FIELD_SIZE, FIELD_SIZE), (0, FIELD_SIZE)),
+            ((FIELD_SIZE, FIELD_SIZE), (FIELD_SIZE, 0)),
+            ((FIELD_SIZE/2, FIELD_SIZE/2), (FIELD_SIZE/2, 0)),  # del me
+            ((FIELD_SIZE/2, FIELD_SIZE/2), (FIELD_SIZE/4, 0)),
         )
         x1, y1 = pos
         x2, y2 = pos + step

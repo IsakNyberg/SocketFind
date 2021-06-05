@@ -5,6 +5,7 @@ from threading import Thread
 
 import pygame
 
+from constants import FIELD_SIZE, SCREEN_SIZE
 from field import *
 
 

@@ -1,16 +1,17 @@
 import math
 import random
-import field
-
 from struct import pack, unpack
+
 from matrixx import Vector, Matrix
+
+import field
+from constants import FIELD_SIZE
 
 MAX_ACCELERATION = 1
 ACCELERATION_FRACTION = 30
 TURN_angle = 2  # 120 * this many degrees per second
 FRICTION = 0.99  # set this to 0.99
 MAX_VELOCITY = 1  # set this to 4
-MAX_POSITION = 2000
 SIZE = 20
 GRAVITY_FRACTION = 70
 
@@ -167,7 +168,7 @@ class Player(Entity):
     cos = math.cos(math.radians(TURN_angle))
     byte_len = 7*4 + 1*4
 
-    def __init__(self, field, name, x=MAX_POSITION // 2, y=MAX_POSITION // 2):
+    def __init__(self, field, name, x=FIELD_SIZE // 2, y=FIELD_SIZE // 2):
         super().__init__(x, y)
         self.field = field
         self.name = name
@@ -198,21 +199,21 @@ class Player(Entity):
 
     def set_position(self, x=-1, y=-1):
         if x == -1 and y == -1:
-            x = random.randint(self.size, MAX_POSITION - self.size)
-            y = random.randint(self.size, MAX_POSITION - self.size)
-        vector = Vector((limit_zero(x, MAX_POSITION), limit_zero(y, MAX_POSITION)))
+            x = random.randint(self.size, FIELD_SIZE - self.size)
+            y = random.randint(self.size, FIELD_SIZE - self.size)
+        vector = Vector((limit_zero(x, FIELD_SIZE), limit_zero(y, FIELD_SIZE)))
         self.position = vector
 
     def set_velocity(self, x=-1, y=-1):
         if x == -1 and y == -1:
-            x = random.randint(-MAX_POSITION, MAX_POSITION)
-            y = random.randint(-MAX_POSITION, MAX_POSITION)
+            x = random.randint(-FIELD_SIZE, FIELD_SIZE)
+            y = random.randint(-FIELD_SIZE, FIELD_SIZE)
         vector = Vector((x, y))
         self.velocity = vector.limit(MAX_VELOCITY)
 
     def move(self):
         self.position += self.velocity
-        self.position.limit_zero(MAX_POSITION)
+        self.position.limit_zero(FIELD_SIZE)
         self.velocity *= FRICTION
 
     def steer(self, turn, forward, shoot=0):
@@ -288,8 +289,8 @@ class Player(Entity):
         y_pos = self.position[1]
         size = self.size
         spring_factor = 0.001
-        if x_pos + size > MAX_POSITION:
-            self.velocity += Vector((MAX_POSITION - (x_pos + size), 0)) * spring_factor
+        if x_pos + size > FIELD_SIZE:
+            self.velocity += Vector((FIELD_SIZE - (x_pos + size), 0)) * spring_factor
             #self.direction *= Vector((-1, 1))
             bounce = True
         elif x_pos - size < 0:
@@ -297,8 +298,8 @@ class Player(Entity):
             #self.direction *= Vector((-1, 1))
             bounce = True
 
-        if y_pos + size > MAX_POSITION:
-            self.velocity += Vector((0, MAX_POSITION - (y_pos + size))) * spring_factor
+        if y_pos + size > FIELD_SIZE:
+            self.velocity += Vector((0, FIELD_SIZE - (y_pos + size))) * spring_factor
             #self.direction *= Vector((1, -1))
             bounce = True
         elif y_pos - size < 0:

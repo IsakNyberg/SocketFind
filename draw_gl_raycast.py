@@ -11,7 +11,7 @@ from OpenGL.GLU import *
 from matrixx import Matrix as M, Vector as V, M2
 
 from draw_gl_basics import draw_line, draw_circle, draw_rect
-from field import MAX_POSITION
+from constants import FIELD_SIZE, SCREEN_SIZE
 
 
 from draw_gl_topdown import iterate  # TODO: temp solve
@@ -21,30 +21,17 @@ _t = time.time()
 DISPLAY_ID = 2
 
 # Options
-SCREEN_SIZE = 800
 FOV_D = 90  # deg
 V_FOV_D = 90 # deg
 COLUMN_COUNT = 100
 ROW_COUNT = 50  # floor only
 FLOOR_CHECKERBOARD_SIZE = 200
 FLOOR_STYLE = 'checkerboard'  # change this string
-FLOOR_USE_MP = False  # multiprocessing
 
 
 # Floor style stuff
 BACKGROUND = V((0x36, 0x36, 0x36)) * 0.2
 WALL_COLOUR = 1/255 * V((0x36, 0x36, 0x36))
-WALL_COLOURS = [
-    V((0x7d, 0xd7, 0xff)),
-    V((0xa6, 0xe4, 0xff)),
-    V((0x82, 0xd9, 0xff)),
-    V((0x5d, 0xcc, 0xfc)),
-    V((0x5d, 0xcc, 0xff)),
-    V((0x5d, 0xdc, 0xff)),
-    V((0x5a, 0xcc, 0xfc)),
-    V((0x40, 0xcc, 0xff)),
-    V((0x4d, 0xcc, 0xfc)),
-]
 DARK_TILE = 1/255 * V((0x20, 0x3c, 0x1e))
 LITE_TILE = DARK_TILE * 1.2
 # IMAGE = pygame.image.load("resources/bg2.jpg")
@@ -68,16 +55,16 @@ _DARKENER = lambda x: _LIGHT_A / (x**2 + _LIGHT_B) + _LIGHT_C
 
 
 # General data
-_SCREEN_MID = SCREEN_SIZE // 2
+_SCREEN_MID = 0.5 * SCREEN_SIZE
 _FOV_R = math.radians(FOV_D)
 _V_FOV_R = math.radians(V_FOV_D)
 _COLUMN_WIDTH = SCREEN_SIZE / COLUMN_COUNT
-_COLUMN_WIDTH_DRAW = int(SCREEN_SIZE / COLUMN_COUNT) + 1
-_COLUMN_BOUNDARIES = tuple(_COLUMN_WIDTH * i for i in range(COLUMN_COUNT + 1))
+_COLUMN_WIDTH_DRAW = int(_COLUMN_WIDTH) + 1
+_COLUMN_BOUNDARIES = tuple(i * _COLUMN_WIDTH for i in range(COLUMN_COUNT + 1))
     # screen x-coordinates of column boundaries
 _ROW_HEIGHT = _SCREEN_MID / ROW_COUNT
 _ROW_HEIGHT_DRAW = int(_ROW_HEIGHT) + 1
-_ROW_BOUNDARIES = tuple(i*_ROW_HEIGHT for i in range(ROW_COUNT + 1))
+_ROW_BOUNDARIES = tuple(i * _ROW_HEIGHT for i in range(ROW_COUNT + 1))
     # screen y-coordinates of row boundaries
 
 
@@ -86,7 +73,8 @@ _ROW_BOUNDARIES = tuple(i*_ROW_HEIGHT for i in range(ROW_COUNT + 1))
 # 1) Calculate distance between camera and view plane:
 #       view_dist = SS/2 / tan(FOV/2)
 # 2) Calculate horizontal angle for each x of column of equal width on screen
-#       theta = atan( (x - (SS/2)) / view_dist )
+#       theta = atan( -(x - (SS/2)) / view_dist )
+#       negative bc positive angle rotates anticlockwise
 # 3) Calculate rotation matrix R for each angle theta
 # 4) Rotate given view direction by R to get a ray
 # 5) Cast ray to get distance dist to wall in the ray's direction
@@ -94,11 +82,11 @@ _ROW_BOUNDARIES = tuple(i*_ROW_HEIGHT for i in range(ROW_COUNT + 1))
 #       depth = dist * cos theta
 # 7) Calculate height of the wall 
 
-_COLUMN_MIDPOINTS = (map(mean, zip(_COLUMN_BOUNDARIES, _COLUMN_BOUNDARIES[1:])))
+_COLUMN_MIDPOINTS = map(mean, zip(_COLUMN_BOUNDARIES, _COLUMN_BOUNDARIES[1:]))
     # distances are sampled for the middle of each column
 _COLUMN_DIST_TO_SCREEN = _SCREEN_MID / math.tan(0.5 * _FOV_R)  # 1
 _COLUMN_ANGLES = tuple(
-    math.atan((x - _SCREEN_MID) / _COLUMN_DIST_TO_SCREEN)
+    math.atan((_SCREEN_MID - x) / _COLUMN_DIST_TO_SCREEN)
     for x in _COLUMN_MIDPOINTS
 )  # 2
 _COLUMN_ROT_MATS = tuple(map(M2.rot, _COLUMN_ANGLES))  # 3
@@ -128,9 +116,9 @@ _VIEW_PLANE_DIST = SCREEN_SIZE / (2 * math.tan(0.5 * _V_FOV_R)) * 0.1
     # TODO rename
     # TODO join with other plane dist?
 _ROW_DEPTHS = (
-    (_SCREEN_MID * _VIEW_PLANE_DIST) / (y - _SCREEN_MID)
+    -(_SCREEN_MID * _VIEW_PLANE_DIST) / (y - _SCREEN_MID)
     for y in _ROW_MIDPOINTS
-)
+)  # negative sign addded as a hack to fix switch to gl
 _FLOOR_PIXEL_DISTS = tuple(
     depth / cos
     for depth in _ROW_DEPTHS
@@ -163,7 +151,6 @@ def draw_frame(field, index):
     draw_floor_walls(field, self_ball)
     glutSwapBuffers()
 
-
 def draw_floor_walls(field, player):
     pos, view = player.position, player.direction
     rays = [rot_mat @ view for rot_mat in _COLUMN_ROT_MATS]
@@ -174,15 +161,12 @@ def draw_floor_walls(field, player):
         (dist, *pos._value, *ray._value)
         for dist, ray in zip(_FLOOR_PIXEL_DISTS, cycle(rays))
     )
-    if FLOOR_USE_MP:
-        with get_context('fork').Pool(2) as pool:
-            floor_positions = pool.starmap(xy_nonvec_calc, flat_input_data)
-    else:
-        floor_positions = tuple(starmap(xy_nonvec_calc, flat_input_data))
-            # TODO: fix distances and skip big ones here
+    floor_positions = tuple(starmap(xy_nonvec_calc, flat_input_data))
+        # TODO: fix distances and skip big ones here
     for i in range(ROW_COUNT * COLUMN_COUNT):
         x, y = floor_positions[i]
-        if x<0 or y<0 or x>2000 or y>2000: continue  # TODO: make this nicer
+        if max(abs(x - 1000), abs(y - 1000)) > 1050: continue
+            # TODO: make this nicer
         draw_rect(
             *(_FLOOR_POSITIONS[i]),
             _COLUMN_WIDTH_DRAW,
