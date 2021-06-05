@@ -10,6 +10,7 @@ from draw_gl_basics import draw_line, draw_circle, draw_rect
 from matrixx import Vector as V
 from constants import SCREEN_SIZE, FIELD_SIZE
 from field import *
+from action import set_key, unset_key
 
 SELF_COLOUR = V([0xff, 0xb9, 0x17])
 TARGET_COLOUR = V([0x19, 0xff, 0xc1])
@@ -118,35 +119,6 @@ def draw_frame(field, index):
     glutSwapBuffers()
 
 
-KEYS_PRESSED = [0, 0, 0, 0, 0]  # wasd e
-def key_down(*args):
-    global KEYS_PRESSED
-    if args[0].lower() == b'w':
-        KEYS_PRESSED[0] = 1
-    if args[0].lower() == b'a':
-        KEYS_PRESSED[1] = 1
-    if args[0].lower() == b's':
-        KEYS_PRESSED[2] = 1
-    if args[0].lower() == b'd':
-        KEYS_PRESSED[3] = 1
-    if args[0].lower() == b'e':
-        KEYS_PRESSED[4] = 1
-
-
-def key_up(*args):
-    global KEYS_PRESSED
-    if args[0].lower() == b'w':
-        KEYS_PRESSED[0] = 0
-    if args[0].lower() == b'a':
-        KEYS_PRESSED[1] = 0
-    if args[0].lower() == b's':
-        KEYS_PRESSED[2] = 0
-    if args[0].lower() == b'd':
-        KEYS_PRESSED[3] = 0
-    if args[0].lower() == b'e':
-        KEYS_PRESSED[4] = 0
-
-
 def init(field, SELF_INDEX, client_tick):
     glutInit()
     glutInitDisplayMode(GLUT_RGBA)
@@ -155,6 +127,6 @@ def init(field, SELF_INDEX, client_tick):
     wind = glutCreateWindow("Socket Find")
     glutDisplayFunc(iterate)  # this should be draw_frame but i am not sure how to pass args
     glutIdleFunc(client_tick)
-    glutKeyboardFunc(key_down)
-    glutKeyboardUpFunc(key_up)
+    glutKeyboardFunc(set_key)
+    glutKeyboardUpFunc(unset_key)
     glutMainLoop()

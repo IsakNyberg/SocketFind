@@ -4,6 +4,7 @@ from threading import Thread
 from field import *
 import draw_gl_topdown
 import draw_gl_raycast
+from action import forward_status, turn_status, shoot_status
 
 print('Import successful.')
 
@@ -27,9 +28,10 @@ def client_tick():
     while TIMEOUT:
         pass
 
-    forward = draw_gl_topdown.KEYS_PRESSED[0] - draw_gl_topdown.KEYS_PRESSED[2]
-    turn = draw_gl_topdown.KEYS_PRESSED[1] - draw_gl_topdown.KEYS_PRESSED[3]
-    shoot = draw_gl_topdown.KEYS_PRESSED[4]
+    forward = forward_status()
+    turn = turn_status()
+    shoot = shoot_status()
+
     data = bytearray(3)
     data[0] = turn + 1
     data[1] = forward + 1
