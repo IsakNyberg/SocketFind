@@ -13,7 +13,7 @@ localPort = 63834
 bufferSize = 1024
 msgFromServer = "Hello UDP Client"
 
-NUM_BOTS = 3
+NUM_BOTS = 0
 MAX_TTL = 2000
 
 bytesToSend = str.encode(msgFromServer)

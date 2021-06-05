@@ -16,6 +16,7 @@ WEAKNESS_COLOUR = V([0xcc, 0x47, 0x81])
 COOL_DOWN_COLOUR = V([0xff, 0xf7, 0x8a])
 OTHER_COLOUR = V([0x6c, 0x55, 0xe0])
 SCREEN_SIZE = 800
+HALF_SCREEN = SCREEN_SIZE // 2
 
 
 def draw_player(entity, colour, perspective):
@@ -31,12 +32,12 @@ def draw_player(entity, colour, perspective):
     if abs(p_y - y_offset) > draw_size:
         return
     else:
-        p_x -= x_offset - SCREEN_SIZE // 2
-        p_y -= y_offset - SCREEN_SIZE // 2
+        p_x -= x_offset - HALF_SCREEN
+        p_y -= y_offset - HALF_SCREEN
         draw_circle(p_x, p_y, 1/255 * colour, size=size)
 
-    front_x = p_x + size * entity.direction[0] * 1.5 + entity.velocity[0] * 3 * entity.cool_down / 100
-    front_y = p_y + size * entity.direction[1] * 1.5 + entity.velocity[1] * 3 * entity.cool_down / 100
+    front_x = p_x + size * entity.direction[0] * 2 * (100 / (100 + entity.cool_down))
+    front_y = p_y + size * entity.direction[1] * 2 * (100 / (100 + entity.cool_down))
     o_x, o_y = entity.direction[1] * size, entity.direction[0] * size
 
     glBegin(GL_POLYGON)  # Nose
@@ -46,28 +47,21 @@ def draw_player(entity, colour, perspective):
 
 
 def draw_projectile(projectile, perspective):
-    offset = perspective.position - Vector((SCREEN_SIZE // 2, SCREEN_SIZE // 2))
-    x_offset = perspective.position[0]
-    y_offset = perspective.position[1]
-
-    p_x = projectile.position[0]
-    p_y = projectile.position[1]
-    if abs(p_x - x_offset) > SCREEN_SIZE:
-        return
-    if abs(p_y - y_offset) > SCREEN_SIZE:
+    offset = perspective.position - Vector((HALF_SCREEN, HALF_SCREEN))
+    if projectile.get_dist_squared(perspective.position) > SCREEN_SIZE**2:
         return
     else:
-        start = (projectile.position + projectile.velocity*5 - offset)
-        end = (projectile.position - projectile.velocity*5 - offset)
-        draw_line(start.to_tuple(), end.to_tuple(), (0.9, 0.5, 0.1))
+        start = (projectile.position - offset)
+        end = (projectile.position - projectile.velocity*projectile.size - offset)
+        draw_line(start.to_tuple(), end.to_tuple(), projectile.colour_tuple())
 
 
 total_stars = 100
-parallax = 0.1
+parallax = 0.3
 star_min, star_max = int(-SCREEN_SIZE * parallax), int(MAX_POSITION * parallax + SCREEN_SIZE)
 stars = tuple(Vector((r(star_min, star_max), r(star_min, star_max))) for _ in range(total_stars))
 def draw_background(field, perspective):
-    pos = (perspective.position - V((SCREEN_SIZE // 2, SCREEN_SIZE // 2)))
+    pos = (perspective.position - V((HALF_SCREEN, HALF_SCREEN)))
     for start, end in field.walls:
         start_perspective = start - pos
         end_perspective = end - pos
@@ -86,8 +80,8 @@ def draw_background(field, perspective):
 
 
 def draw_scope(field, perspective):
-    start = Vector((SCREEN_SIZE // 2, SCREEN_SIZE // 2))
-    end = start + perspective.direction*(SCREEN_SIZE//2)
+    start = Vector((HALF_SCREEN, HALF_SCREEN))
+    end = start + perspective.direction * HALF_SCREEN
     draw_line(start, end, (0.9, 0.1, 0.1))
 
 
@@ -106,7 +100,7 @@ def draw_frame(field, index):
     iterate()
     self_ball = field.players[index]
     draw_background(field, self_ball)
-    draw_scope(field, self_ball)
+    #draw_scope(field, self_ball)
     for projectile in field.projectiles:
         draw_projectile(projectile, self_ball)
     for player in field.players:
@@ -152,13 +146,14 @@ def key_up(*args):
     if args[0].lower() == b'e':
         KEYS_PRESSED[4] = 0
 
+
 def init(field, SELF_INDEX, client_tick):
     glutInit()
     glutInitDisplayMode(GLUT_RGBA)
     glutInitWindowSize(SCREEN_SIZE, SCREEN_SIZE)
     glutInitWindowPosition(300, 75)
     wind = glutCreateWindow("Socket Find")
-    glutDisplayFunc(iterate)
+    glutDisplayFunc(iterate)  # this should be draw_frame but i am not sure how to pass args
     glutIdleFunc(client_tick)
     glutKeyboardFunc(key_down)
     glutKeyboardUpFunc(key_up)

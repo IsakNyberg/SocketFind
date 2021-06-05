@@ -30,12 +30,12 @@ def client_tick():
     forward = draw_gl_topdown.KEYS_PRESSED[0] - draw_gl_topdown.KEYS_PRESSED[2]
     turn = draw_gl_topdown.KEYS_PRESSED[1] - draw_gl_topdown.KEYS_PRESSED[3]
     shoot = draw_gl_topdown.KEYS_PRESSED[4]
-    field.steer(SELF_INDEX, turn, forward, shoot)
     data = bytearray(3)
     data[0] = turn + 1
     data[1] = forward + 1
     data[2] = shoot
     if forward or turn or shoot:
+        field.steer(SELF_INDEX, turn, forward, shoot)
         UDPClientSocket.sendto(data, serverAddressPort)
     status = field.tick(SELF_INDEX)
     '''for s in status: SOUNDS

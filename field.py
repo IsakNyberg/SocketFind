@@ -1,5 +1,6 @@
 import random
 import math
+import time
 
 from entity import *
 
@@ -64,11 +65,8 @@ class Field:
             self.new_targets()
         return entity
 
-    def new_projectile(self, projectile=None):
-        if projectile is None:
-            self.projectiles.append(Projectile(Vector((0,0)), Vector((0,0))))
-        else:
-            self.projectiles.append(projectile)
+    def new_projectile(self, projectile):
+        self.projectiles.append(projectile)
 
     def remove(self, index):
         self.status.append(JOIN)
@@ -135,6 +133,7 @@ class Field:
             hit_players = []
             for projectile in self.projectiles:
                 if entity_a.is_hit(projectile):
+                    self.projectiles.remove(projectile)
                     hit_players.append(entity_a)
                     if self_index == entity_a.name:
                         self.status.append(SELF_HIT)
@@ -169,7 +168,7 @@ class Field:
         while projectiles < len(self.projectiles):
             del self.projectiles[0]
         while projectiles > len(self.projectiles):
-            self.new_projectile()
+            self.new_projectile(Projectile(Vector((0, 0)), Vector((0, 0))))
 
         received_bytes = received_bytes[2:]
         for i, player in enumerate(self.players):
@@ -189,5 +188,4 @@ class Field:
             res += player.to_bytes()
         for projectile in self.projectiles:
             res += projectile.to_bytes()
-
         return res

@@ -41,21 +41,31 @@ class Entity:
 
 
 class Projectile(Entity):
-    byte_len = 4*4 + 1*4
+    byte_len = 4*4 + 3 + 2 + 1*3
 
-    def __init__(self, position, velocity,  damage=1, range=1024):
+    def __init__(self, position, velocity,  damage=1, ttl=1000, size=3, colour=0xffffff, cool_down=100, recoil=1):
         super().__init__(*position.to_tuple())
         self.velocity = velocity
-        self.time_to_live = range
+        self.colour = colour
+        self.time_to_live = ttl
         self.damage = damage
-        self.size = 3
+        self.size = size
+        self.cool_down = cool_down
+        self.recoil = recoil
 
     def tick(self):
         self.position += self.velocity
-        if self.time_to_live:
+        if self.time_to_live > 0:
             self.time_to_live -= 1
+            return False
         else:
             return True
+
+    def colour_tuple(self):
+        r = ((self.colour >> 16) & 0xff) / 255
+        g = ((self.colour >> 8) & 0xff) / 255
+        b = (self.colour & 0xff) / 255
+        return r, g, b
 
     def from_bytes(self, bytes):
         float_offsets = (0, 4, 8, 12, 16)
@@ -66,10 +76,11 @@ class Projectile(Entity):
         self.position = Vector((pos_x, pos_y))
         self.velocity = Vector((vel_x, vel_y))
 
-        ttl1, ttl2, self.damage, self.size, = (
-            bytes[pos] for pos in (16, 17, 18, 19)
+        colour1, colour2, colour3, ttl1, ttl2, self.damage, self.size, self.recoil = (
+            bytes[pos] for pos in (16, 17, 18, 19, 20, 21, 22, 23)
         )
         self.time_to_live = ttl1 << 8 + ttl2
+        self.colour = (colour1 << 16) + (colour2 << 8) + colour3
 
     def to_bytes(self):
         res = bytearray()
@@ -77,10 +88,78 @@ class Projectile(Entity):
         res += pack('f', self.position[1])
         res += pack('f', self.velocity[0])
         res += pack('f', self.velocity[1])
+        res += self.colour.to_bytes(3, 'big')
         res += self.time_to_live.to_bytes(2, 'big')
         res += self.damage.to_bytes(1, 'big')
         res += self.size.to_bytes(1, 'big')
+        res += self.recoil.to_bytes(1, 'big')
         return res
+
+
+class Bullet(Projectile):
+    ttl = 500
+    damage = 1
+    colour = 0xe67f19
+    cool_down = 100
+    recoil = 30
+    speed = 7
+    size = 5
+
+    def __init__(self, parent):
+        super(Bullet, self).__init__(
+            parent.position + parent.direction*parent.size*2,
+            parent.direction * Bullet.speed,
+            damage=Bullet.damage,
+            ttl=Bullet.ttl,
+            size=Bullet.size,
+            colour=Bullet.colour,
+            cool_down=Bullet.cool_down,
+            recoil=Bullet.recoil,
+        )
+
+
+class Laser(Projectile):
+    ttl = 50
+    damage = 1
+    colour = 0x66ff11
+    cool_down = 20
+    recoil = 0
+    speed = 7
+    size = 5
+
+    def __init__(self, parent):
+        super(Laser, self).__init__(
+            parent.position + parent.direction*parent.size*2,
+            parent.direction * Laser.speed,
+            damage=Laser.damage,
+            ttl=Laser.ttl,
+            size=Laser.size,
+            colour=Laser.colour,
+            cool_down=Laser.cool_down,
+            recoil=Laser.recoil,
+        )
+
+
+class Flame(Projectile):
+    ttl = 150
+    damage = 1
+    colour = 0xff6611
+    cool_down = 3
+    recoil = 0
+    speed = 1
+    size = 5
+
+    def __init__(self, parent):
+        super(Flame, self).__init__(
+            parent.position + parent.direction*parent.size*2,
+            parent.direction * Flame.speed,
+            damage=Flame.damage,
+            ttl=Flame.ttl,
+            size=Flame.size,
+            colour=Flame.colour,
+            cool_down=Flame.cool_down,
+            recoil=Flame.recoil,
+        )
 
 
 class Player(Entity):
@@ -102,6 +181,8 @@ class Player(Entity):
         self.damage = 0
         self.points = 0
         self.cool_down = 0
+
+        self.weapon = Laser
 
     @property
     def score(self):
@@ -229,18 +310,19 @@ class Player(Entity):
         return bounce
 
     def shoot(self):
-        recoil = 3
-        cool_down = 100
         if self.cool_down:
             return
-        self.cool_down = cool_down
-        self.velocity += self.direction * -recoil
-        self.field.new_projectile(Projectile(self.position + self.direction*self.size, self.direction*5, 1))
+        self.cool_down = self.weapon.cool_down
+        self.velocity += self.direction * -self.weapon.recoil*0.1
+        self.field.new_projectile(self.weapon(self))
 
     def is_hit(self, projectile):
         if (self.position-projectile.position).length_squared < self.size ** 2:
             self.velocity += projectile.velocity
             self.damage += 1
+            if self.damage > 255:
+                self.damage = 0
+                print('Damage exceeding 255 :(')
             projectile.time_to_live = 0
             return True
         else:
