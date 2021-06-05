@@ -30,6 +30,8 @@ class Field:
         self.mutex = 0
 
         self.self_index = -1
+        self.tick_count = 0
+        self.last_tick = time.time()
 
     @property
     def score(self):
@@ -117,7 +119,7 @@ class Field:
 
     def tick(self, self_index=-1):
         # WALL_COLLISION 0, OTHER_COLLISION 1, SELF_HIT 2, TARGET_HIT 3, JOIN 4
-        if self.mutex:
+        if self.mutex or self.last_tick + 1/120 > time.time():
             return []
 
         for player in self.players:
