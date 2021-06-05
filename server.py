@@ -48,13 +48,13 @@ def flood(connections, connections_ttl, bytes_to_send):
 
 def game_thread(field, connections, connections_ttl):
     tick = 0
-    clock = pygame.time.Clock()
+    #clock = pygame.time.Clock()
     while 1:
+        if tick % 1 == 0:
+            flood(connections, connections_ttl,  field.to_bytes())
         field.tick()
         tick += 1
-        clock.tick(128)
-        if tick % 8 == 0:
-            flood(connections, connections_ttl,  field.to_bytes())
+        #clock.tick(128)
 
 
 if __name__ == '__main__':
