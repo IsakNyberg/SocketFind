@@ -43,3 +43,16 @@ def turn_status():
 
 def shoot_status():
     return Action.SHOOT in CUR_ACTION
+
+
+def set_action_value(value):
+    global CUR_ACTION
+    CUR_ACTION = Action(value)
+
+
+def get_action_value():
+    return CUR_ACTION.value.to_bytes(1, 'big')
+
+
+def get_actions_tuple():
+    return turn_status(), forward_status(), shoot_status()

@@ -4,7 +4,7 @@ from threading import Thread
 from field import *
 import draw_gl_topdown
 import draw_gl_raycast
-from action import forward_status, turn_status, shoot_status
+from action import get_action_value, get_actions_tuple
 
 print('Import successful.')
 
@@ -28,16 +28,9 @@ def client_tick():
     while TIMEOUT:
         pass
 
-    forward = forward_status()
-    turn = turn_status()
-    shoot = shoot_status()
-
-    data = bytearray(3)
-    data[0] = turn + 1
-    data[1] = forward + 1
-    data[2] = shoot
-    if forward or turn or shoot:
-        field.steer(SELF_INDEX, turn, forward, shoot)
+    data = get_action_value()
+    if data:
+        field.steer(SELF_INDEX, *get_actions_tuple())
         UDPClientSocket.sendto(data, serverAddressPort)
     status = field.tick(SELF_INDEX)
     '''for s in status: SOUNDS
@@ -52,9 +45,7 @@ def client_tick():
         if s == JOIN:
             sound5.play()'''
     draw_frame(field, SELF_INDEX)
-    import time
-    time.sleep(1/120)
-    '''  AI
+    ''' AI
     index = 0
     ai_player = field.players[index]
     target = ai_player.target
