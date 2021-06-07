@@ -166,7 +166,7 @@ class Flame(Projectile):
 class Player(Entity):
     sin = math.sin(math.radians(TURN_angle))
     cos = math.cos(math.radians(TURN_angle))
-    byte_len = 7*4 + 1*4
+    byte_len = 7*4 + 2*2 + 1*2
 
     def __init__(self, field, name, x=FIELD_SIZE // 2, y=FIELD_SIZE // 2):
         super().__init__(x, y)
@@ -341,13 +341,18 @@ class Player(Entity):
         self.velocity = Vector((vel_x, vel_y))
         self.acceleration = acceleration
 
-        target_id, self.damage, self.points, self.cool_down = (
+        dmg1, dmg2, points1, points2 = (
             bytes[pos] for pos in (28, 29, 30, 31)
+        )
+        self.damage = dmg1 << 8 + dmg2
+        self.points = points1 << 8 + points2
+        target_id, self.cool_down = (
+            bytes[pos] for pos in (32, 33)
         )
         self.target = field.players[target_id]
 
     def to_bytes(self):
-        # current length  7*4 + 1*4 = 32 bytes
+        # current length  7*4 + 2*2 + 1*2 = 34 bytes
         res = bytearray()
         res += pack('f', self.position[0])  # 4
         res += pack('f', self.position[1])  # 4
@@ -356,8 +361,8 @@ class Player(Entity):
         res += pack('f', self.velocity[0])  # 4
         res += pack('f', self.velocity[1])  # 4
         res += pack('f', self.acceleration)  # 4
+        res += self.damage.to_bytes(2, 'big')  # 2
+        res += self.points.to_bytes(2, 'big')  # 2
         res += self.target.name.to_bytes(1, 'big')  # 1
-        res += self.damage.to_bytes(1, 'big')  # 1
-        res += self.points.to_bytes(1, 'big')  # 1
         res += self.cool_down.to_bytes(1, 'big')  # 1
         return res
