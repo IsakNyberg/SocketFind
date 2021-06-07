@@ -25,7 +25,7 @@ TIMEOUT = 0
 SELF_INDEX = -1
 
 # toggle this between display and display_proj
-DISPLAY = display#_proj
+DISPLAY = display_proj
 DISPLAY_ID = DISPLAY.DISPLAY_ID
 
 
@@ -101,6 +101,7 @@ if __name__ == '__main__':
     clock = pygame.time.Clock()
 
     screen = pygame.display.set_mode([SCREEN_SIZE, SCREEN_SIZE])
+    surface = pygame.Surface(screen.get_size())
     tick = 0
     running = True
     print('start Game')
@@ -144,11 +145,11 @@ if __name__ == '__main__':
         offset_y = self.position[1] - SCREEN_SIZE // 2
 
         if DISPLAY_ID == 1:
-            DISPLAY.draw_world(screen, offset_x=offset_x, offset_y=offset_y)
+            DISPLAY.draw_world(surface, offset_x=offset_x, offset_y=offset_y)
         elif DISPLAY_ID == 2:
-            DISPLAY.draw_world(screen, field, self, SCREEN_SIZE)
+            DISPLAY.draw_world(surface, field, self, SCREEN_SIZE)
         for p in field.projectiles:
-            DISPLAY.draw_projectile(screen, p, offset_x, offset_y)
+            DISPLAY.draw_projectile(surface, p, offset_x, offset_y)
 
         for e in field.players:
             colour = OTHER_COLOUR
@@ -162,12 +163,12 @@ if __name__ == '__main__':
                 colour = TARGET_COLOUR
 
             if DISPLAY_ID == 1:
-                DISPLAY.draw_entity(screen, e, colour=colour, offset_x=offset_x, offset_y=offset_y)
+                DISPLAY.draw_entity(surface, e, colour=colour, offset_x=offset_x, offset_y=offset_y)
             elif DISPLAY_ID == 2:
-                display.draw_entity(screen, e, colour=colour, offset_x=offset_x, offset_y=offset_y, mini=True)
-                DISPLAY.draw_entity(screen, e, colour, SCREEN_SIZE, self)
+                DISPLAY.draw_entity(surface, e, colour, SCREEN_SIZE, self)
 
         text_surface = font.render(f'Score: {field.players[SELF_INDEX].score}/{field.score}', False, (0xff, 0xff, 0xff))
         screen.blit(text_surface, (10, 10))
-        pygame.display.flip()
+        screen.blit(surface, (0, 0))
+        pygame.display.update()
 
