@@ -6,7 +6,7 @@ import pygame
 from matrixx import Vector as V
 
 from field import *
-import display, display_proj
+import draw_topdown, draw_raycast
 from constants import SCREEN_SIZE
 
 
@@ -25,7 +25,7 @@ TIMEOUT = 0
 SELF_INDEX = -1
 
 # toggle this between display and display_proj
-DISPLAY = display_proj
+DISPLAY = draw_topdown
 DISPLAY_ID = DISPLAY.DISPLAY_ID
 
 
