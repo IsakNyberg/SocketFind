@@ -9,7 +9,7 @@ from constants import FIELD_SIZE
 
 MAX_ACCELERATION = 1
 ACCELERATION_FRACTION = 30
-TURN_angle = 2  # 120 * this many degrees per second
+TURN_ANGLE = 3  # 120 * this many degrees per second
 FRICTION = 0.99  # set this to 0.99
 MAX_VELOCITY = 1  # set this to 4
 SIZE = 20
@@ -164,8 +164,8 @@ class Flame(Projectile):
 
 
 class Player(Entity):
-    sin = math.sin(math.radians(TURN_angle))
-    cos = math.cos(math.radians(TURN_angle))
+    sin = math.sin(math.radians(TURN_ANGLE))
+    cos = math.cos(math.radians(TURN_ANGLE))
     byte_len = 7*4 + 2*2 + 1*2
 
     def __init__(self, field, name, x=FIELD_SIZE // 2, y=FIELD_SIZE // 2):
@@ -321,9 +321,6 @@ class Player(Entity):
         if (self.position-projectile.position).length_squared < self.size ** 2:
             self.velocity += projectile.velocity
             self.damage += 1
-            if self.damage > 255:
-                self.damage = 0
-                print('Damage exceeding 255 :(')
             projectile.time_to_live = 0
             return True
         else:
