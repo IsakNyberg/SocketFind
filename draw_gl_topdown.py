@@ -1,3 +1,5 @@
+import random
+
 import OpenGL  # not used but i don't dare removing it
 from OpenGL.GL import *
 from OpenGL.GLUT import *
@@ -57,10 +59,11 @@ def draw_projectile(projectile, perspective):
         draw_line(start.to_tuple(), end.to_tuple(), projectile.colour_tuple())
 
 
-total_stars = 100
-parallax = 0.3
+total_stars = 500
+parallax = 0.5
 star_min, star_max = int(-SCREEN_SIZE * parallax), int(FIELD_SIZE * parallax + SCREEN_SIZE)
 stars = tuple(Vector((r(star_min, star_max), r(star_min, star_max))) for _ in range(total_stars))
+parallax_list = tuple(random.random()/5+0.3 for _ in range(total_stars))
 def draw_background(field, perspective):
     pos = (perspective.position - V((HALF_SCREEN, HALF_SCREEN)))
     for start, end in field.walls:
@@ -71,13 +74,14 @@ def draw_background(field, perspective):
             end_perspective.to_tuple(),
             (0.7, 0.3, 0.4),
         )
-    pos *= parallax
-    for star in stars:
-        if abs(star[0] - pos[0]) > SCREEN_SIZE:
+    for star, parallax in zip(stars, parallax_list):
+        parallax_pos = pos * parallax
+        if abs(star[0] - parallax_pos[0]) > SCREEN_SIZE:
             continue
-        elif abs(star[1] - pos[1]) > SCREEN_SIZE:
+        elif abs(star[1] - parallax_pos[1]) > SCREEN_SIZE:
             continue
-        draw_circle(*star-pos, (0.8, 0.8, 1), size=2)
+        draw_circle(*star - parallax_pos, (0.8, 0.8, 1), size=2)
+
 
 
 def draw_scope(field, perspective):

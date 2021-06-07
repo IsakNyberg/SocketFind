@@ -119,8 +119,10 @@ class Field:
 
     def tick(self, self_index=-1):
         # WALL_COLLISION 0, OTHER_COLLISION 1, SELF_HIT 2, TARGET_HIT 3, JOIN 4
+        while self.mutex:
+            pass
         t = time.time()
-        if self.mutex or t < self.next_tick:
+        if t < self.next_tick:
             time.sleep(self.next_tick - t)
         self.next_tick = time.time() + 1 / 120
 

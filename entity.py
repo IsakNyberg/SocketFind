@@ -183,7 +183,7 @@ class Player(Entity):
         self.points = 0
         self.cool_down = 0
 
-        self.weapon = Laser
+        self.weapon = Bullet
 
     @property
     def score(self):
