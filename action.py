@@ -10,49 +10,42 @@ class Action(Flag):
 
 
 KEYS_BINDINGS = {
-    b'w': Action.FWD,
-    b'a': Action.LEFT,
-    b's': Action.STOP,
-    b'd': Action.RIGHT,
-    b' ': Action.SHOOT,
+    ord('w'): Action.FWD,
+    ord('a'): Action.LEFT,
+    ord('s'): Action.STOP,
+    ord('d'): Action.RIGHT,
+    ord(' '): Action.SHOOT,
 }
 
 
-CUR_ACTION = Action(0)
+class ActionStatus:
+    def __init__(self):
+        self.cur = Action(0)
 
+    def set_key(self, key, *args):
+        self.cur |= KEYS_BINDINGS.get(key, Action(0))
 
-def set_key(key, *args):
-    global CUR_ACTION
-    act = KEYS_BINDINGS.get(key.lower(), Action(0))
-    CUR_ACTION |= act
+    def unset_key(self, key, *args):
+        self.cur &= ~KEYS_BINDINGS.get(key, Action(0))
 
+    def set_action_value(self, value):
+        self.cur = Action(value)
 
-def unset_key(key, *args):
-    global CUR_ACTION
-    act = KEYS_BINDINGS.get(key.lower(), Action(0))
-    CUR_ACTION &= ~act
+    @property
+    def as_byte(self):
+        return self.cur.value.to_bytes(1, 'big')
 
+    @property
+    def as_tuple(self):
+        return (
+            (Action.LEFT in self.cur) - (Action.RIGHT in self.cur),
+            (Action.FWD in self.cur) - (Action.STOP in self.cur),
+            Action.SHOOT in self.cur,
+        )
 
-def forward_status():
-    return (Action.FWD in CUR_ACTION) - (Action.STOP in CUR_ACTION)
-
-
-def turn_status():
-    return (Action.LEFT in CUR_ACTION) - (Action.RIGHT in CUR_ACTION)
-
-
-def shoot_status():
-    return Action.SHOOT in CUR_ACTION
-
-
-def set_action_value(value):
-    global CUR_ACTION
-    CUR_ACTION = Action(value)
-
-
-def get_action_value():
-    return CUR_ACTION.value.to_bytes(1, 'big')
-
-
-def get_actions_tuple():
-    return turn_status(), forward_status(), shoot_status()
+    def update_from_pygame(self, keys):
+        for (n, act) in KEYS_BINDINGS.items():
+            if keys[n]:
+                self.cur |= act
+            else:
+                self.cur &= ~act

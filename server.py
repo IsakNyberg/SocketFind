@@ -4,7 +4,7 @@ import socket
 from threading import Thread
 
 import pygame
-from action import set_action_value, get_actions_tuple
+import action
 
 from constants import FIELD_SIZE, SCREEN_SIZE
 from field import *
@@ -64,6 +64,7 @@ if __name__ == '__main__':
     connections = []
     connections_ttl = []
     field = Field()
+    cur_actions = action.ActionStatus()
 
     bot_threads = []
     for bot_num in range(NUM_BOTS):
@@ -84,8 +85,8 @@ if __name__ == '__main__':
         index = connections.index(address)
         connections_ttl[index] = MAX_TTL
         if len(message) == 1:
-            set_action_value(message[0])
-            field.steer(index + NUM_BOTS, *get_actions_tuple())
+            cur_actions.set_action_value(message[0])
+            field.steer(index + NUM_BOTS, *cur_actions.as_tuple)
 
         for i in range(len(connections_ttl)):
             if connections_ttl[i] < 0:

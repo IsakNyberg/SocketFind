@@ -8,6 +8,7 @@ from matrixx import Vector as V
 from field import *
 import draw_topdown, draw_raycast
 from constants import SCREEN_SIZE
+import action
 
 
 serverAddressPort = ('85.229.18.138', 63834)
@@ -27,24 +28,6 @@ SELF_INDEX = -1
 # toggle this between display and display_proj
 DISPLAY = draw_topdown
 DISPLAY_ID = DISPLAY.DISPLAY_ID
-
-
-def get_keys():
-    keys = pygame.key.get_pressed()
-    turn = 0
-    forward = 0
-    shoot = 0
-    if keys[pygame.K_w]:
-        forward += 1
-    if keys[pygame.K_a]:
-        turn += -1
-    if keys[pygame.K_s]:
-        forward -= 1
-    if keys[pygame.K_d]:
-        turn += 1
-    if keys[pygame.K_e]:
-        shoot += 1
-    return turn, forward, shoot
 
 
 def game_thread(field):
@@ -100,6 +83,8 @@ if __name__ == '__main__':
     sound5 = pygame.mixer.Sound('resources/sound5.ogg')
     clock = pygame.time.Clock()
 
+    cur_actions = action.ActionStatus()
+
     screen = pygame.display.set_mode([SCREEN_SIZE, SCREEN_SIZE])
     surface = pygame.Surface(screen.get_size())
     tick = 0
@@ -111,13 +96,12 @@ if __name__ == '__main__':
                 running = False
 
         # get steering data and send to server
-        keys = get_keys()
-        field.steer(SELF_INDEX, *keys)
-        data = bytearray()
-        data.append(keys[0]+1)
-        data.append(keys[1]+1)
-        data.append(keys[2])
-        UDPClientSocket.sendto(data, serverAddressPort)
+        cur_actions.update_from_pygame(pygame.key.get_pressed())
+        field.steer(SELF_INDEX, *cur_actions.as_tuple)
+        UDPClientSocket.sendto(
+            cur_actions.as_byte,
+            serverAddressPort,
+        )
 
         clock.tick(128)
         tick += 1

@@ -217,9 +217,9 @@ class Player(Entity):
         self.velocity *= FRICTION
 
     def steer(self, turn, forward, shoot=0):
-        if turn < 0:  # clockwise
+        if turn > 0:  # anti clockwise
             rotation_matrix = Matrix(((Player.cos, Player.sin), (-Player.sin, Player.cos)))
-        elif turn > 0:  # anti clockwise
+        elif turn < 0:  #  clockwise
             rotation_matrix = Matrix(((Player.cos, -Player.sin), (Player.sin, Player.cos)))
         else:
             rotation_matrix = None
