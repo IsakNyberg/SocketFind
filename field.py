@@ -114,7 +114,6 @@ class Field:
                 # this wall is close than the last
             ):
                 min_t = t
-        assert min_t < inf, "Not facing any wall"
         return min_t
 
     def tick(self, self_index=-1):
