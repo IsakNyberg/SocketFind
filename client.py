@@ -43,39 +43,38 @@ def game_thread(field):
                 TIMEOUT = 0
         except socket.timeout:
             if TIMEOUT == 0:
-                print('timeout')
+                print('timeout', end='')
             else:
-                print('.', end='')
+                SELF_INDEX = server_connect(field)
             SELF_INDEX = -1
             TIMEOUT += 1
 
 
-def server_connect():
-    global SELF_INDEX, field
-    while SELF_INDEX == -1:
+def server_connect(field):
+    self_index = -1
+    while self_index == -1:
         try:
             UDPClientSocket.sendto(b'0x00', serverAddressPort)
             received_byes = UDPClientSocket.recvfrom(bufferSize)[0]
-            SELF_INDEX = received_byes[-1]
+            self_index = received_byes[-1]
             field.self_index = SELF_INDEX
             received_byes = received_byes[:-1]
             field.from_bytes(received_byes)
         except socket.timeout:
             print('.', end='')
+    return self_index
 
 
 if __name__ == '__main__':
     print('Create game')
     field = Field()
     print('Logging into server', end='')
-    server_connect()
+    SELF_INDEX = server_connect(field)
     print('\nFetching game from server')
     thread = Thread(target=game_thread, args=(field, ))
     thread.start()
 
     pygame.init()
-    pygame.font.init()
-    font = pygame.font.SysFont('Comic Sans MS', 30)
     sound1 = pygame.mixer.Sound('resources/sound1.ogg')
     sound2 = pygame.mixer.Sound('resources/sound2.ogg')
     sound3 = pygame.mixer.Sound('resources/sound3.ogg')
@@ -151,8 +150,8 @@ if __name__ == '__main__':
             elif DISPLAY_ID == 2:
                 DISPLAY.draw_entity(surface, e, colour, SCREEN_SIZE, self)
 
-        text_surface = font.render(f'Score: {field.players[SELF_INDEX].score}/{field.score}', False, (0xff, 0xff, 0xff))
-        screen.blit(text_surface, (10, 10))
+        #text_surface = font.render(f'Score: {field.players[SELF_INDEX].score}/{field.score}', False, (0xff, 0xff, 0xff))
+        #screen.blit(text_surface, (10, 10))
         screen.blit(surface, (0, 0))
         pygame.display.update()
 
