@@ -7,7 +7,6 @@ from itertools import starmap, cycle
 import pygame
 from matrixx import Matrix as M, Vector as V, M2
 
-import display
 from constants import FIELD_SIZE
 
 
