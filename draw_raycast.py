@@ -19,7 +19,7 @@ FOV_D = 90  # deg
 V_FOV_D = 90 # deg
 COLUMN_COUNT = 100
 ROW_COUNT = 50  # floor only
-FLOOR_CHECKERBOARD_SIZE = 200
+FLOOR_CHECKERBOARD_SIZE = 20
 FLOOR_STYLE = 'checkerboard'  # change this string
 FLOOR_USE_MP = False  # multiprocessing
 
@@ -52,7 +52,7 @@ _FLOOR_COLOUR = {
 
 
 # light
-LIGHT_MIN = 0.2  #0.4  # between 0 and 0.5, do NOT put 0.5 or higher here please
+LIGHT_MIN = 0.4 #0.4  # between 0 and 0.5, do NOT put 0.5 or higher here please
 LIGHT_HALF_LIFE = 400  #700
 _LIGHT_C = LIGHT_MIN  # light intensity: f(x) = a/(x^2+b) + c
 _LIGHT_B = LIGHT_HALF_LIFE**2 * (1 - 2*_LIGHT_C)  # maths checks out, I promise
@@ -150,26 +150,21 @@ def xy_nonvec_calc(dist, pos_x, pos_y, ray_x, ray_y):
     return pos_x + dist*ray_x, pos_y + dist*ray_y
 
 
-def draw_world(screen, field, player, screen_size):
+def draw_world(screen, field, player):
     screen.fill(BACKGROUND._value)
     pos, view = player.position, player.direction
-    rays = [rot_mat @ view for rot_mat in _COLUMN_ROT_MATS]
+    rays = tuple(rot_mat @ view for rot_mat in _COLUMN_ROT_MATS)
 
     # floor
-    floor_positions = None
     flat_input_data = tuple(
-        (dist, *pos._value, *ray._value)
+        (dist, *pos, *ray)
         for dist, ray in zip(_FLOOR_PIXEL_DISTS, cycle(rays))
     )
-    if FLOOR_USE_MP:
-        with get_context('fork').Pool(2) as pool:
-            floor_positions = pool.starmap(xy_nonvec_calc, flat_input_data)
-    else:
-        floor_positions = tuple(starmap(xy_nonvec_calc, flat_input_data))
-            # TODO: fix distances and skip big ones here
+    floor_positions = tuple(starmap(xy_nonvec_calc, flat_input_data))
+        # TODO: fix distances and skip big ones here
     for i in range(ROW_COUNT * COLUMN_COUNT):
         x, y = floor_positions[i]
-        if x<0 or y<0 or x>2000 or y>2000: continue  # TODO: make this nicer
+        if x<=-5 or y<=-5 or x>=2005 or y>=2005: continue  # TODO: make this nicer
         pygame.draw.rect(
             screen,
             _FLOOR_COLOUR(x, y),
@@ -180,6 +175,7 @@ def draw_world(screen, field, player, screen_size):
     for ray, cos, left in zip(rays, _COLUMN_COSINES, _COLUMN_BOUNDARIES):
         dist = field.cast_ray_at_wall(pos, ray)
         depth = dist * cos
+        # TODO: rethink with depth = view dot ray
         wall_height = min(
             40 * SCREEN_SIZE / depth,  # TODO: magic number multiplier
             SCREEN_SIZE,
