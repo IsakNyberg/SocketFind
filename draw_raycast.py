@@ -21,7 +21,8 @@ COLUMN_COUNT = 100
 ROW_COUNT = 50  # floor only
 FLOOR_CHECKERBOARD_SIZE = 20
 FLOOR_STYLE = 'checkerboard'  # change this string
-FLOOR_USE_MP = False  # multiprocessing
+CROSSHAIR_SIZE = 15
+CROSSHAIR_COLOUR = '#babdb6'
 
 
 # Floor style stuff
@@ -143,6 +144,12 @@ _FLOOR_RECTS = tuple(
 _FLOOR_SHADING = tuple(_DARKENER(dist) for dist in _FLOOR_PIXEL_DISTS)
     # TODO: add shading to floor in a nice way
 
+
+# entities
+PLAYER_HEIGHT = 1
+_PLAYER_CIRCLE_SCREEN_HEIGHT_MULT = 0.5 * SCREEN_SIZE * _VIEW_PLANE_DIST
+    # this is hard to explain but the maths checks out, promise
+
 print(f'3d precomp finished in {round(time.time()-_t, 3)}s')
 
 
@@ -189,64 +196,140 @@ def draw_world(screen, field, player):
         )
         wall_colour = (WALL_COLOUR * _DARKENER(dist))._value
         pygame.draw.rect(screen, wall_colour, wall)
+    draw_crosshair(screen)
 
 
-def draw_entity(screen, entity, colour, screen_size, player):
-    return
-    # "minimap"
-    # display.draw_entity(screen, entity, colour, **kwargs, mini=True)
+def draw_crosshair(screen):
+    pygame.draw.line(
+        screen,
+        CROSSHAIR_COLOUR,
+        (_SCREEN_MID, _SCREEN_MID + CROSSHAIR_SIZE),
+        (_SCREEN_MID, _SCREEN_MID - CROSSHAIR_SIZE),
+    )  # vertical
+    pygame.draw.line(
+        screen,
+        CROSSHAIR_COLOUR,
+        (_SCREEN_MID + CROSSHAIR_SIZE, _SCREEN_MID),
+        (_SCREEN_MID - CROSSHAIR_SIZE, _SCREEN_MID),
+    )  # horizontal
+    pygame.draw.circle(
+        screen,
+        CROSSHAIR_COLOUR,
+        (_SCREEN_MID, _SCREEN_MID),
+        0.6 * CROSSHAIR_SIZE,
+        1
+    )  # circle
 
-    if entity is player: return
+
+def draw_entity(screen, entity, colour, player):
+    if entity is player: return  # don't draw self
     p = player.position
     e = entity.position
     p2e = e - p
     v = player.direction
-    dot = p2e @ v
+    depth = p2e @ v
 
-    if FOV_D < 180 and dot < 0: return
-    # don't draw entities behind you if FOV is forward-facing
+    if FOV_D < 180 and depth < 0: return  # fast FOV check
+        # don't draw entities behind you if FOV is forward-facing
 
     dist = p2e.length
-    phi = math.acos(min(1, dot / dist))  # assumes v.length is 1
-    if 2*phi > _FOV_R: return
-    # outside FOV
+    dist_inv = 1 / dist
+
+    phi = 0 if depth > dist else math.acos(depth * dist_inv)
+    if 2 * phi > _FOV_R: return  # outside FOV
 
     x1, y1 = p2e
     x2, y2 = v
-    if x1*y2 - x2*y1 > 0:  # v nice solve, 3rd component of cross product
-        phi = -phi  # figure out if e left or right of p2e
+    if x1*y2 > x2*y1:  # v nice solve, 3rd component of cross product
+        phi = -phi
 
-    depth = dist * math.cos(phi)
-    wall_height = min(screen_size, screen_size * 50 / depth)
-    entity_height = ENTITY_HEIGHT*wall_height
+        # x-coord of middle of player
+    y_pos = _SCREEN_MID + (_VIEW_PLANE_DIST * _SCREEN_MID * dist_inv)
+    #    # y-coord of centre of ellipse on floor
 
-    exposition = screen_size*(phi+(_FOV_R/2))/_FOV_R
-    x_offset = 1000*entity.size//2 / depth
-    bot = screen_size//2 + wall_height//2
-    top = bot - entity_height
+    phi_sides = math.atan(10 * e.size * dist_inv)
+        # angle between p2e and p2(edges of circle)
+    left_x  = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(phi - phi_sides)
+    mid_x   = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(phi)
+    right_x = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(phi + phi_sides)
+        # I couldn't not align these
+
+    y_offset = 40 * _SCREEN_MID / depth  # TODO fix magic number from wall
+
+    #pygame.draw.circle(screen, colour._value, (x_pos,_SCREEN_MID), 10)
+    #return
 
     colour = (_DARKENER(dist) * colour)._value
 
-    pygame.draw.polygon(screen, colour, [
-        (exposition + x_offset, bot),
-        (exposition - x_offset, bot),
-        (exposition, top),
-    ])
-    ellipse_height = 5 + 5000/depth
-    rect = pygame.Rect(
-        exposition - x_offset,
-        bot - ellipse_height/2,
-        2 * x_offset,
-        ellipse_height,
-    )
-    pygame.draw.ellipse(screen, colour, rect)
+    pygame.draw.polygon(screen, colour, (
+        (left_x,  _SCREEN_MID),
+        (mid_x,   _SCREEN_MID + y_offset),  # bottom
+        (right_x, _SCREEN_MID),
+        (mid_x,   _SCREEN_MID - y_offset * 0.5),  # top
+    ))  # main shape
+    pygame.draw.polygon(screen, colour, (
+        (left_x,  _SCREEN_MID + y_offset),  # bottom left
+        (mid_x,   _SCREEN_MID + y_offset * 0.8),  # top
+        (right_x, _SCREEN_MID + y_offset),  # bottom right
+    ))  # stand triangle
+    pygame.draw.line(
+        screen,
+        '#2e3436',
+        (left_x,  _SCREEN_MID),
+        (right_x, _SCREEN_MID),
+    )  # line in the middle
+    pygame.draw.circle(
+        screen,
+        '#cc0000',
+        (mid_x,  _SCREEN_MID + y_offset),
+        2
+    )  # bottom circle
 
 
-    #pygame.draw.circle(screen, colour, (exposition, screen_size/2), size)
+def draw_projectile(screen, proj, player, *args, **kwargs):
+    p = player.position
+    start = proj.position + -5*proj.velocity
+    end = proj.position + 5*proj.velocity
+
+    p2s = start - p
+    p2e = end - p
+    v = player.direction
+
+    s_depth = p2s @ v
+    e_depth = p2e @ v
+
+    if FOV_D < 180 and (s_depth < 0 or e_depth < 0):
+        return  # skip if everything behind you
+        # TODO draw if one in front and one behind
+
+    s_dist = p2s.length
+    e_dist = p2e.length
+
+    s_phi = 0 if s_depth > s_dist else math.acos(s_depth / s_dist)
+    e_phi = 0 if e_depth > e_dist else math.acos(e_depth / e_dist)
+
+    sx, sy = start
+    ex, ey = end
+    vx, vy = v
+    if sx*vy > vx*sy: s_phi *= -1
+    if ex*vy > vx*ey: e_phi *= -1
+
+    s_pos = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(s_phi)
+    e_pos = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(e_phi)
+
+    pygame.draw.line(
+        screen,
+        proj.colour,
+        (s_pos,  _SCREEN_MID),
+        (e_pos, _SCREEN_MID),
+        width=1+int(proj.size * 200 / e_depth)
+    )  # line
 
 
-def draw_projectile(*args, **kwargs):
-    # TODO
-    pass
+
+
+
+
+
 
 

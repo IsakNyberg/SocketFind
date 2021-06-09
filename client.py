@@ -26,7 +26,7 @@ TIMEOUT = 0
 SELF_INDEX = -1
 
 # toggle this between display and display_proj
-DISPLAY = draw_topdown
+DISPLAY = draw_raycast
 DISPLAY_ID = DISPLAY.DISPLAY_ID
 
 
@@ -84,8 +84,9 @@ if __name__ == '__main__':
 
     cur_actions = action.ActionStatus()
 
-    screen = pygame.display.set_mode([SCREEN_SIZE, SCREEN_SIZE])
-    surface = pygame.Surface(screen.get_size())
+    screen = pygame.display.set_mode([SCREEN_SIZE*2, SCREEN_SIZE])
+    surfaceL = pygame.Surface(screen.get_size())
+    surfaceR = pygame.Surface(screen.get_size())
     tick = 0
     running = True
     print('start Game')
@@ -130,9 +131,8 @@ if __name__ == '__main__':
         offset_x = self.position[0] - SCREEN_SIZE // 2
         offset_y = self.position[1] - SCREEN_SIZE // 2
 
-        DISPLAY.draw_world(surface, field, self)
-        for p in field.projectiles:
-            DISPLAY.draw_projectile(surface, p, offset_x, offset_y)
+        draw_topdown.draw_world(surfaceL, field, self)
+        draw_raycast.draw_world(surfaceR, field, self)
 
         for e in field.players:
             colour = OTHER_COLOUR
@@ -145,13 +145,16 @@ if __name__ == '__main__':
             elif e is self.target:
                 colour = TARGET_COLOUR
 
-            if DISPLAY_ID == 1:
-                DISPLAY.draw_entity(surface, e, colour=colour, offset_x=offset_x, offset_y=offset_y)
-            elif DISPLAY_ID == 2:
-                DISPLAY.draw_entity(surface, e, colour, SCREEN_SIZE, self)
+            draw_topdown.draw_entity(surfaceL, e, colour=colour, offset_x=offset_x, offset_y=offset_y)
+            draw_raycast.draw_entity(surfaceR, e, colour, self)
+
+        for p in field.projectiles:
+            draw_topdown.draw_projectile(surfaceL, p, offset_x, offset_y)
+            draw_raycast.draw_projectile(surfaceR, p, self)
 
         #text_surface = font.render(f'Score: {field.players[SELF_INDEX].score}/{field.score}', False, (0xff, 0xff, 0xff))
         #screen.blit(text_surface, (10, 10))
-        screen.blit(surface, (0, 0))
+        screen.blit(surfaceL, (0, 0))
+        screen.blit(surfaceR, (SCREEN_SIZE, 0))
         pygame.display.update()
 
