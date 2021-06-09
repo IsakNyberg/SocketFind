@@ -1,5 +1,6 @@
 import math
 import random
+from random import randint as r
 
 import pygame
 
@@ -8,7 +9,6 @@ from constants import *
 
 from matrixx import Vector as V
 
-
 DISPLAY_ID = 1
 
 BACKGROUND = '#000000'
@@ -16,15 +16,20 @@ SELF_COLOUR = '#1cff91'
 WEAKNESS_COLOUR = '#cc4781'
 OTHER_COLOUR = '#6c55e0'
 COOL_DOWN_COLOUR = '#fff78a'
-PROJECTILE_COLOUR = '#e0303a'
+# PROJECTILE_COLOUR = '#e0303a' use projectile.colour instead
 BG = pygame.image.load("resources/bg2.jpg")
 MINI_OFFSET = 100
 
+total_stars = 500
+parallax = 0.5
+star_min, star_max = int(-SCREEN_SIZE * parallax), int(FIELD_SIZE * parallax + SCREEN_SIZE)
+stars = tuple(Vector((r(star_min, star_max), r(star_min, star_max))) for _ in range(total_stars))
+parallax_list = tuple(random.random() / 5 + 0.3 for _ in range(total_stars))
 
-temp_stars = tuple(V((random.randint(0,2000),random.randint(0,2000))) for _ in range(500))
+
 def draw_world(screen, field, player):
     screen.fill(BACKGROUND)
-    pos = player.position - V((0.5*SCREEN_SIZE, 0.5*SCREEN_SIZE))
+    pos = player.position - V((HALF_SCREEN, HALF_SCREEN))
     for start, end in field.walls:
         start_perspective = start - pos
         end_perspective = end - pos
@@ -35,14 +40,18 @@ def draw_world(screen, field, player):
             end_perspective.to_tuple(),
             5,
         )
-    for star in temp_stars:
-        s2p = star - pos
-        if s2p.norm_inf > 800: continue
-        # Isak, ^this^ is how it's done
-        pygame.draw.circle(screen, '#ffffff', s2p._value, 1)
+    for star, parallax in zip(stars, parallax_list):
+        parallax_pos = pos * parallax
+        # your stuff didn't work :_(
+        if abs(star[0] - parallax_pos[0]) > SCREEN_SIZE:
+            continue
+        elif abs(star[1] - parallax_pos[1]) > SCREEN_SIZE:
+            continue
+        pygame.draw.circle(screen, '#ccccff', (star - parallax_pos).to_tuple(), 1)
 
 
-def draw_entity(screen, entity, colour=OTHER_COLOUR, offset_x=0, offset_y=0, mini=False):
+def draw_player(screen, entity, colour=OTHER_COLOUR, offset_x=0, offset_y=0, mini=False):
+    # todo adapt this with vectors
     mult = 0.1 if mini else 1
     colour = colour._value
 
