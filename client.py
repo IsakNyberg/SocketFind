@@ -147,7 +147,7 @@ if __name__ == '__main__':
             elif player is me.target:
                 colour = TARGET_COLOUR
 
-            draw_topdown.draw_entity(surfaceL, player, colour=colour, offset_x=offset_x, offset_y=offset_y)
+            draw_topdown.draw_player(surfaceL, player, colour=colour, offset_x=offset_x, offset_y=offset_y)
 
         for p in field.projectiles:
             draw_topdown.draw_projectile(surfaceL, p, offset_x, offset_y)

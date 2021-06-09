@@ -9,11 +9,10 @@ from constants import FIELD_SIZE
 
 MAX_ACCELERATION = 1
 ACCELERATION_FRACTION = 30
-TURN_ANGLE = 3  # 120 * this many degrees per second
+TURN_ANGLE = 2  # 120 * this many degrees per second
 FRICTION = 0.99  # set this to 0.99
 MAX_VELOCITY = 1  # set this to 4
 SIZE = 20
-GRAVITY_FRACTION = 70
 
 
 def normalize(a, b):
@@ -42,9 +41,12 @@ class Entity:
 
 
 class Projectile(Entity):
-    byte_len = 4*4 + 3 + 2 + 1*3
+    byte_len = 4*4 + 3 + 2 + 1*4
 
-    def __init__(self, position, velocity,  damage=1, ttl=1000, size=3, colour=0xffffff, cool_down=100, recoil=1):
+    def __init__(
+            self, position, velocity,  damage=1, ttl=1000, size=3,
+            colour=0xffffff, cool_down=100, recoil=1, shape=1, impact=1
+    ):
         super().__init__(*position.to_tuple())
         self.velocity = velocity
         self.colour = colour
@@ -53,6 +55,8 @@ class Projectile(Entity):
         self.size = size
         self.cool_down = cool_down
         self.recoil = recoil
+        self.shape = shape  # 1=line, 2=circle
+        self.impact = impact
 
     def tick(self):
         self.position += self.velocity
@@ -68,6 +72,16 @@ class Projectile(Entity):
         b = (self.colour & 0xff) / 255
         return r, g, b
 
+    def hit(self, player):
+        direction = player.position-self.position
+        if direction.length_squared < player.size ** 2:  # todo size squared can be caches
+            player.velocity += self.velocity * self.impact
+            player.damage += self.damage
+            self.time_to_live = 0
+            return True
+        else:
+            return False
+
     def from_bytes(self, bytes):
         float_offsets = (0, 4, 8, 12, 16)
         pos_x, pos_y, vel_x, vel_y = (
@@ -77,11 +91,15 @@ class Projectile(Entity):
         self.position = Vector((pos_x, pos_y))
         self.velocity = Vector((vel_x, vel_y))
 
-        colour1, colour2, colour3, ttl1, ttl2, self.damage, self.size, self.recoil = (
-            bytes[pos] for pos in (16, 17, 18, 19, 20, 21, 22, 23)
+        colour1, colour2, colour3, ttl1, ttl2 = (
+            bytes[pos] for pos in (16, 17, 18, 19, 20)
         )
-        self.time_to_live = ttl1 << 8 + ttl2
         self.colour = (colour1 << 16) + (colour2 << 8) + colour3
+        self.time_to_live = ttl1 << 8 + ttl2
+
+        self.damage, self.size, self.recoil, self.shape = (
+            bytes[pos] for pos in (21, 22, 23, 24)
+        )
 
     def to_bytes(self):
         res = bytearray()
@@ -92,8 +110,9 @@ class Projectile(Entity):
         res += self.colour.to_bytes(3, 'big')
         res += self.time_to_live.to_bytes(2, 'big')
         res += self.damage.to_bytes(1, 'big')
-        res += self.size.to_bytes(1, 'big')
+        res += int(self.size).to_bytes(1, 'big')
         res += self.recoil.to_bytes(1, 'big')
+        res += self.shape.to_bytes(1, 'big')
         return res
 
 
@@ -105,10 +124,11 @@ class Bullet(Projectile):
     recoil = 30
     speed = 7
     size = 5
+    shape = 1  #line
 
     def __init__(self, parent):
         super(Bullet, self).__init__(
-            parent.position + parent.direction*parent.size*2,
+            parent.position + parent.direction*parent.size*1.5,
             parent.direction * Bullet.speed,
             damage=Bullet.damage,
             ttl=Bullet.ttl,
@@ -127,10 +147,11 @@ class Laser(Projectile):
     recoil = 0
     speed = 7
     size = 5
+    shape = 1  #line
 
     def __init__(self, parent):
         super(Laser, self).__init__(
-            parent.position + parent.direction*parent.size*2,
+            parent.position + parent.direction*parent.size*1.5,
             parent.direction * Laser.speed,
             damage=Laser.damage,
             ttl=Laser.ttl,
@@ -138,21 +159,23 @@ class Laser(Projectile):
             colour=Laser.colour,
             cool_down=Laser.cool_down,
             recoil=Laser.recoil,
+            shape=Laser.shape,
         )
 
 
 class Flame(Projectile):
     ttl = 150
     damage = 1
-    colour = 0xff6611
+    colour = 0xfff0f0
     cool_down = 3
-    recoil = 0
-    speed = 1
+    recoil = 1
+    speed = 3
     size = 5
+    shape = 2  #circle
 
     def __init__(self, parent):
         super(Flame, self).__init__(
-            parent.position + parent.direction*parent.size*2,
+            parent.position + parent.direction*parent.size*1.5,
             parent.direction * Flame.speed,
             damage=Flame.damage,
             ttl=Flame.ttl,
@@ -160,7 +183,34 @@ class Flame(Projectile):
             colour=Flame.colour,
             cool_down=Flame.cool_down,
             recoil=Flame.recoil,
+            shape=Flame.shape,
         )
+
+    def tick(self):
+        friction = 0.99
+        size_increase = 0.3
+        self.position += self.velocity
+        self.velocity *= friction
+        self.size += size_increase
+        r = max((self.colour & 0xff0000) - 0x010000, 0x001000)
+        g = max((self.colour & 0x00ff00) - 0x000200, 0x000100)
+        b = max((self.colour & 0x0000ff) - 0x000004, 0x000001)
+        self.colour = r | g | b
+        if self.time_to_live > 0:
+            self.time_to_live -= 1
+            return False
+        else:
+            return True
+
+    def hit(self, player):
+        direction = player.position - self.position
+        if direction.length_squared < player.size ** 2 + self.size ** 2:  # todo size squared can be caches
+            player.velocity += (direction + self.velocity) * self.impact
+            player.velocity.limit(MAX_VELOCITY)
+            player.damage += self.damage
+            return True
+        else:
+            return False
 
 
 class Player(Entity):
@@ -183,7 +233,7 @@ class Player(Entity):
         self.points = 0
         self.cool_down = 0
 
-        self.weapon = Bullet
+        self.weapon = Flame
 
     @property
     def score(self):
@@ -219,7 +269,7 @@ class Player(Entity):
     def steer(self, turn, forward, shoot=0):
         if turn > 0:  # anti clockwise
             rotation_matrix = Matrix(((Player.cos, Player.sin), (-Player.sin, Player.cos)))
-        elif turn < 0:  #  clockwise
+        elif turn < 0:  # clockwise
             rotation_matrix = Matrix(((Player.cos, -Player.sin), (Player.sin, Player.cos)))
         else:
             rotation_matrix = None
@@ -318,13 +368,7 @@ class Player(Entity):
         self.field.new_projectile(self.weapon(self))
 
     def is_hit(self, projectile):
-        if (self.position-projectile.position).length_squared < self.size ** 2:
-            self.velocity += projectile.velocity
-            self.damage += 1
-            projectile.time_to_live = 0
-            return True
-        else:
-            return False
+        return projectile.hit(self)
 
     def from_bytes(self, bytes, field):
         # current length  7*4 + 1*4 = 32 bytes

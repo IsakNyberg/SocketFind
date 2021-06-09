@@ -81,17 +81,19 @@ def draw_player(screen, entity, colour=OTHER_COLOUR, offset_x=0, offset_y=0, min
 
 
 def draw_projectile(screen, projectile, x_offset=0, y_offset=0):
-    colour = PROJECTILE_COLOUR
+    colour = projectile.colour
     offset = Vector((x_offset, y_offset))
 
-    p_x = projectile.position[0]
-    p_y = projectile.position[1]
-    if abs(p_x - x_offset) > 800:
-        return  # yes Grisha i know that the else is no needed but i think it adds clarity
-    if abs(p_y - y_offset) > 800:
+    # todo infnorm this
+    if (projectile.position - offset).length_squared > SCREEN_SIZE_SQ:
         return
+    if projectile.shape == 1:  # line
+        start = (projectile.position - offset).to_tuple()
+        end = (projectile.position - projectile.velocity * projectile.size - offset).to_tuple()
+        pygame.draw.line(screen, colour, start, end)
+    elif projectile.shape == 2:  # circle
+        position = (projectile.position - offset).to_tuple()
+        radius = projectile.size
+        pygame.draw.circle(screen, colour, position, radius)
     else:
-        start = (projectile.position + projectile.velocity*5 - offset)
-        end = (projectile.position - projectile.velocity*5 - offset)
-        pygame.draw.line(screen, colour, start.to_tuple(), end.to_tuple())
-
+        print(f'Projectile shape ({projectile.shape}) unknown.')
