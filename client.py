@@ -109,6 +109,9 @@ if __name__ == '__main__':
             while TIMEOUT:
                 pass
 
+        if tick % 3:
+            continue
+
         status = field.tick(SELF_INDEX)
         for s in status:
             if s == WALL_COLLISION:
