@@ -74,6 +74,7 @@ _ROW_HEIGHT_DRAW = int(_ROW_HEIGHT) + 1
 _ROW_BOUNDARIES = tuple(
     SCREEN_SIZE - i*_ROW_HEIGHT for i in range(ROW_COUNT + 1)
 )   # screen y-coordinates of row boundaries
+_FIELD_MID = V((_SCREEN_MID, _SCREEN_MID))
 
 
 # Wall maths:
@@ -171,7 +172,8 @@ def draw_world(screen, field, player):
         # TODO: fix distances and skip big ones here
     for i in range(ROW_COUNT * COLUMN_COUNT):
         x, y = floor_positions[i]
-        if x<=-5 or y<=-5 or x>=2005 or y>=2005: continue  # TODO: make this nicer
+        if max(abs(x-1000), abs(y-1000)) > 1100: continue
+        #if x<=-5 or y<=-5 or x>=2005 or y>=2005: continue  # TODO: make this nicer
         pygame.draw.rect(
             screen,
             _FLOOR_COLOUR(x, y),
