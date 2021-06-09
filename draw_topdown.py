@@ -1,8 +1,12 @@
 import math
+import random
 
 import pygame
 
 from field import *
+from constants import *
+
+from matrixx import Vector as V
 
 
 DISPLAY_ID = 1
@@ -17,9 +21,25 @@ BG = pygame.image.load("resources/bg2.jpg")
 MINI_OFFSET = 100
 
 
-def draw_world(screen, offset_x=0, offset_y=0):
+temp_stars = tuple(V((random.randint(0,2000),random.randint(0,2000))) for _ in range(500))
+def draw_world(screen, field, player):
     screen.fill(BACKGROUND)
-    screen.blit(BG, (-offset_x, -offset_y))
+    pos = player.position - V((0.5*SCREEN_SIZE, 0.5*SCREEN_SIZE))
+    for start, end in field.walls:
+        start_perspective = start - pos
+        end_perspective = end - pos
+        pygame.draw.line(
+            screen,
+            '#a40000',
+            start_perspective.to_tuple(),
+            end_perspective.to_tuple(),
+            5,
+        )
+    for star in temp_stars:
+        s2p = star - pos
+        if s2p.norm_inf > 800: continue
+        # Isak, ^this^ is how it's done
+        pygame.draw.circle(screen, '#ffffff', s2p._value, 1)
 
 
 def draw_entity(screen, entity, colour=OTHER_COLOUR, offset_x=0, offset_y=0, mini=False):

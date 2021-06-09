@@ -128,7 +128,7 @@ if __name__ == '__main__':
         offset_y = self.position[1] - SCREEN_SIZE // 2
 
         if DISPLAY_ID == 1:
-            DISPLAY.draw_world(surface, offset_x=offset_x, offset_y=offset_y)
+            DISPLAY.draw_world(surfaceL, field, self)
         elif DISPLAY_ID == 2:
             DISPLAY.draw_world(surface, field, self, SCREEN_SIZE)
         for p in field.projectiles:
