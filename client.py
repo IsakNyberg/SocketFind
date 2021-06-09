@@ -127,30 +127,30 @@ if __name__ == '__main__':
             if s == JOIN:
                 sound5.play()
 
-        self = field.players[SELF_INDEX]
-        offset_x = self.position[0] - SCREEN_SIZE // 2
-        offset_y = self.position[1] - SCREEN_SIZE // 2
+        me = field.players[SELF_INDEX]
+        offset_x = me.position[0] - SCREEN_SIZE // 2
+        offset_y = me.position[1] - SCREEN_SIZE // 2
 
-        draw_topdown.draw_world(surfaceL, field, self)
-        draw_raycast.draw_world(surfaceR, field, self)
+        draw_topdown.draw_world(surfaceL, field, me)
+        draw_raycast.draw_frame(surfaceR, field, me)
+            # this draws the entire frame
+            # TODO: do the same for topdown
 
-        for e in field.players:
+        for player in field.players:
             colour = OTHER_COLOUR
-            if e.cool_down:
+            if player.cool_down:
                 colour = COOL_DOWN_COLOUR
-            elif e is self:
+            elif player is me:
                 colour = SELF_COLOUR
-            elif e.target is self:
+            elif player.target is me:
                 colour = WEAKNESS_COLOUR
-            elif e is self.target:
+            elif player is me.target:
                 colour = TARGET_COLOUR
 
-            draw_topdown.draw_entity(surfaceL, e, colour=colour, offset_x=offset_x, offset_y=offset_y)
-            draw_raycast.draw_entity(surfaceR, e, colour, self)
+            draw_topdown.draw_entity(surfaceL, player, colour=colour, offset_x=offset_x, offset_y=offset_y)
 
         for p in field.projectiles:
             draw_topdown.draw_projectile(surfaceL, p, offset_x, offset_y)
-            draw_raycast.draw_projectile(surfaceR, p, self)
 
         #text_surface = font.render(f'Score: {field.players[SELF_INDEX].score}/{field.score}', False, (0xff, 0xff, 0xff))
         #screen.blit(text_surface, (10, 10))

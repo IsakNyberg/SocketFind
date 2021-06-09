@@ -2,7 +2,8 @@ import math
 import time
 from statistics import mean
 from multiprocessing import Pool, get_context
-from itertools import starmap, cycle
+from itertools import starmap, cycle, chain
+from operator import itemgetter
 
 import pygame
 from matrixx import Matrix as M, Vector as V, M2
@@ -150,20 +151,22 @@ _FLOOR_SHADING = tuple(_DARKENER(dist) for dist in _FLOOR_PIXEL_DISTS)
 PLAYER_HEIGHT = 1
 _PLAYER_CIRCLE_SCREEN_HEIGHT_MULT = 0.5 * SCREEN_SIZE * _VIEW_PLANE_DIST
     # this is hard to explain but the maths checks out, promise
+SELF_COLOUR = V([0x1c, 0xff, 0x91])
+TARGET_COLOUR = V([0x19, 0xff, 0xc1])
+WEAKNESS_COLOUR = V([0xcc, 0x47, 0x81])
+OTHER_COLOUR = V([0x6c, 0x55, 0xe0])
+COOL_DOWN_COLOUR = V([0xff, 0xf7, 0x8a])
 
 print(f'3d precomp finished in {round(time.time()-_t, 3)}s')
 
 
 def xy_nonvec_calc(dist, pos_x, pos_y, ray_x, ray_y):
+    # used for a big map in floor calculation
     return pos_x + dist*ray_x, pos_y + dist*ray_y
 
 
-def draw_world(screen, field, player):
-    screen.fill(BACKGROUND._value)
-    pos, view = player.position, player.direction
-    rays = tuple(rot_mat @ view for rot_mat in _COLUMN_ROT_MATS)
-
-    # floor
+def draw_floor(screen, pos, view, rays):
+    # calculates and draws entire floor
     flat_input_data = tuple(
         (dist, *pos, *ray)
         for dist, ray in zip(_FLOOR_PIXEL_DISTS, cycle(rays))
@@ -180,7 +183,9 @@ def draw_world(screen, field, player):
             _FLOOR_RECTS[i],
         )
 
-    # walls
+
+def calc_walls(field, pos, view, rays):
+    # generator that returns wall secment drawing info
     for ray, cos, left in zip(rays, _COLUMN_COSINES, _COLUMN_BOUNDARIES):
         dist = field.cast_ray_at_wall(pos, ray)
         depth = dist * cos
@@ -197,34 +202,14 @@ def draw_world(screen, field, player):
             wall_height,
         )
         wall_colour = (WALL_COLOUR * _DARKENER(dist))._value
-        pygame.draw.rect(screen, wall_colour, wall)
-    draw_crosshair(screen)
+        yield dist, draw_wall, wall_colour, wall
 
 
-def draw_crosshair(screen):
-    pygame.draw.line(
-        screen,
-        CROSSHAIR_COLOUR,
-        (_SCREEN_MID, _SCREEN_MID + CROSSHAIR_SIZE),
-        (_SCREEN_MID, _SCREEN_MID - CROSSHAIR_SIZE),
-    )  # vertical
-    pygame.draw.line(
-        screen,
-        CROSSHAIR_COLOUR,
-        (_SCREEN_MID + CROSSHAIR_SIZE, _SCREEN_MID),
-        (_SCREEN_MID - CROSSHAIR_SIZE, _SCREEN_MID),
-    )  # horizontal
-    pygame.draw.circle(
-        screen,
-        CROSSHAIR_COLOUR,
-        (_SCREEN_MID, _SCREEN_MID),
-        0.6 * CROSSHAIR_SIZE,
-        1
-    )  # circle
+def draw_wall(screen, wall_colour, wall):
+    pygame.draw.rect(screen, wall_colour, wall)
 
 
-def draw_entity(screen, entity, colour, player):
-    if entity is player: return  # don't draw self
+def calc_player(entity, colour, player):
     p = player.position
     e = entity.position
     p2e = e - p
@@ -258,11 +243,27 @@ def draw_entity(screen, entity, colour, player):
 
     y_offset = 40 * _SCREEN_MID / depth  # TODO fix magic number from wall
 
-    #pygame.draw.circle(screen, colour._value, (x_pos,_SCREEN_MID), 10)
-    #return
-
     colour = (_DARKENER(dist) * colour)._value
 
+    return dist, draw_player, left_x, mid_x, right_x, y_offset, colour
+
+
+def calc_players(field, me):
+    for player in field.players:
+        if player is me: continue  # don't draw self
+        colour = OTHER_COLOUR
+        if player.cool_down:
+            colour = COOL_DOWN_COLOUR
+        elif player.target is me:
+            colour = WEAKNESS_COLOUR
+        elif player is me.target:
+            colour = TARGET_COLOUR
+
+        if (res := calc_player(player, colour, me)) is not None:
+            yield res
+
+
+def draw_player(screen, left_x, mid_x, right_x, y_offset, colour):
     pygame.draw.polygon(screen, colour, (
         (left_x,  _SCREEN_MID),
         (mid_x,   _SCREEN_MID + y_offset),  # bottom
@@ -288,7 +289,7 @@ def draw_entity(screen, entity, colour, player):
     )  # bottom circle
 
 
-def draw_projectile(screen, proj, player, *args, **kwargs):
+def calc_projectile(proj, player):
     p = player.position
     start = proj.position + -5*proj.velocity
     end = proj.position + 5*proj.velocity
@@ -319,19 +320,75 @@ def draw_projectile(screen, proj, player, *args, **kwargs):
     s_pos = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(s_phi)
     e_pos = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(e_phi)
 
+    width = 1+int(proj.size * 200 / e_depth)
+    colour = proj.colour
+
+    return s_dist, draw_projectile, colour, s_pos, e_pos, width
+    # TODO: what should these be sorted by?
+
+
+def calc_projectiles(field, me):
+    for proj in field.projectiles:
+        if (res := calc_projectile(proj, me)) is not None:
+            yield res
+
+
+def draw_projectile(screen, colour, s_pos, e_pos, width):
     pygame.draw.line(
         screen,
-        proj.colour,
+        colour,
         (s_pos,  _SCREEN_MID),
         (e_pos, _SCREEN_MID),
-        width=1+int(proj.size * 200 / e_depth)
+        width,
     )  # line
 
 
+def draw_crosshair(screen):
+    pygame.draw.line(
+        screen,
+        CROSSHAIR_COLOUR,
+        (_SCREEN_MID, _SCREEN_MID + CROSSHAIR_SIZE),
+        (_SCREEN_MID, _SCREEN_MID - CROSSHAIR_SIZE),
+    )  # vertical
+    pygame.draw.line(
+        screen,
+        CROSSHAIR_COLOUR,
+        (_SCREEN_MID + CROSSHAIR_SIZE, _SCREEN_MID),
+        (_SCREEN_MID - CROSSHAIR_SIZE, _SCREEN_MID),
+    )  # horizontal
+    pygame.draw.circle(
+        screen,
+        CROSSHAIR_COLOUR,
+        (_SCREEN_MID, _SCREEN_MID),
+        0.6 * CROSSHAIR_SIZE,
+        1,
+    )  # circle
 
 
+def draw_frame(screen, field, me):
+    # draws the whole entire thing, yo
+    screen.fill(BACKGROUND._value)
+    pos, view = me.position, me.direction
+    rays = tuple(rot_mat @ view for rot_mat in _COLUMN_ROT_MATS)
 
+    draw_floor(screen, pos, view, rays)  # floor (duh)
+        # note that floor is drawn first because nothing can be behind it
 
+    calculated_walls = calc_walls(field, pos, view, rays)
+    calculated_players = calc_players(field, me)
+    calculated_proj = calc_projectiles(field, me)
+
+    calculated_data = chain(
+        calculated_walls,
+        calculated_players,
+        calculated_proj
+    )
+    sorted_data = sorted(calculated_data, key=itemgetter(0), reverse=True)
+
+    for (_, draw_func, *args) in sorted_data:
+        draw_func(screen, *args)
+
+    draw_crosshair(screen)  # crosshair at the very end
 
 
 
