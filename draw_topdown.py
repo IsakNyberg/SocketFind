@@ -55,13 +55,14 @@ def draw_world(screen, field, player):
         )
 
 
-def draw_player(screen, entity, colour=OTHER_COLOUR, offset_x=0, offset_y=0, mini=False):
+def draw_player(screen, entity, colour=V([0x6c, 0x55, 0xe0]), offset=V((0, 0)), mini=False):
     # todo adapt this with vectors
     mult = 0.1 if mini else 1
-    colour = colour._value
+    colour = colour.to_tuple()
 
-    x = (entity.position[0] - offset_x) * mult
-    y = (entity.position[1] - offset_y) * mult
+    screen_pos = V((HALF_SCREEN, HALF_SCREEN))
+    x = (entity.position[0] - offset[0] + screen_pos[0]) * mult
+    y = (entity.position[1] - offset[1] + screen_pos[1]) * mult
     size = entity.size * mult
 
     front_x = x + size * entity.direction[0] * 1.5
@@ -85,19 +86,20 @@ def draw_player(screen, entity, colour=OTHER_COLOUR, offset_x=0, offset_y=0, min
         pygame.draw.circle(screen, colour, (x, y), size - 10)
 
 
-def draw_projectile(screen, projectile, x_offset=0, y_offset=0):
+def draw_projectile(screen, projectile, offset=V((0, 0))):
     colour = projectile.colour
-    offset = Vector((x_offset, y_offset))
+    screen_center = V((HALF_SCREEN, HALF_SCREEN))
 
     # todo infnorm this
     if (projectile.position - offset).length_squared > SCREEN_SIZE_SQ:
         return
+
     if projectile.shape == 1:  # line
-        start = (projectile.position - offset).to_tuple()
-        end = (projectile.position - projectile.velocity * projectile.size - offset).to_tuple()
+        start = (projectile.position - offset + screen_center).to_tuple()
+        end = (projectile.position - projectile.velocity*projectile.size - offset + screen_center).to_tuple()
         pygame.draw.line(screen, colour, start, end)
     elif projectile.shape == 2:  # circle
-        position = (projectile.position - offset).to_tuple()
+        position = (projectile.position - offset + screen_center).to_tuple()
         radius = projectile.size
         pygame.draw.circle(screen, colour, position, radius)
     else:

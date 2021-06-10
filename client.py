@@ -7,7 +7,7 @@ from matrixx import Vector as V
 
 from field import *
 import draw_topdown, draw_raycast
-from constants import SCREEN_SIZE
+from constants import SCREEN_SIZE, HALF_SCREEN
 import action
 
 
@@ -128,8 +128,8 @@ if __name__ == '__main__':
                 sound5.play()
 
         me = field.players[SELF_INDEX]
-        offset_x = me.position[0] - SCREEN_SIZE // 2
-        offset_y = me.position[1] - SCREEN_SIZE // 2
+        offset_x = me.position[0] - HALF_SCREEN
+        offset_y = me.position[1] - HALF_SCREEN
 
         draw_topdown.draw_world(surfaceL, field, me)
         draw_raycast.draw_frame(surfaceR, field, me)
@@ -147,10 +147,10 @@ if __name__ == '__main__':
             elif player is me.target:
                 colour = TARGET_COLOUR
 
-            draw_topdown.draw_player(surfaceL, player, colour=colour, offset_x=offset_x, offset_y=offset_y)
+            draw_topdown.draw_player(surfaceL, player, colour=colour, offset=me.position)
 
         for p in field.projectiles:
-            draw_topdown.draw_projectile(surfaceL, p, offset_x, offset_y)
+            draw_topdown.draw_projectile(surfaceL, p, offset=me.position)
 
         #text_surface = font.render(f'Score: {field.players[SELF_INDEX].score}/{field.score}', False, (0xff, 0xff, 0xff))
         #screen.blit(text_surface, (10, 10))
