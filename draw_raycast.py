@@ -208,11 +208,11 @@ def draw_wall(screen, wall_colour, wall):
     pygame.draw.rect(screen, wall_colour, wall)
 
 
-def calc_player(entity, colour, player):
-    p = player.position
-    e = entity.position
+def calc_player(player, colour, me):
+    p = me.position
+    e = player.position
     p2e = e - p
-    v = player.direction
+    v = me.direction
     depth = p2e @ v
 
     if FOV_D < 180 and depth < 0: return  # fast FOV check
@@ -291,7 +291,7 @@ def draw_player(screen, left_x, mid_x, right_x, y_offset, colour):
 def calc_projectile(proj, player):
     p = player.position
     start = proj.position + -5*proj.velocity
-    end = proj.position + 5*proj.velocity
+    end = proj.position
 
     p2s = start - p
     p2e = end - p
@@ -391,7 +391,7 @@ def draw_frame(screen, field, me):
     calculated_data = chain(
         calculated_walls,
         calculated_players,
-        calculated_proj
+        calculated_proj,
     )
     sorted_data = sorted(calculated_data, key=itemgetter(0), reverse=True)
 
