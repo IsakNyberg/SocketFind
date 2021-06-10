@@ -1,6 +1,6 @@
 import math
 import random
-from struct import pack, unpack
+from struct import pack, unpack, error
 
 from matrixx import Vector, Matrix
 
@@ -74,8 +74,17 @@ class Projectile(Entity):
 
     def hit(self, player):
         direction = player.position-self.position
-        if direction.length_squared < player.size ** 2:  # todo size squared can be caches
-            player.velocity += self.velocity * self.impact
+        direction_sq = direction.length_squared
+        player_size_sq = player.size ** 2
+        if self.shape == 1 and direction_sq < player_size_sq:  # todo size squared can be cached
+            player.velocity += (self.velocity * self.impact)
+            player.damage += self.damage
+            self.time_to_live = 0
+            return True
+        elif self.shape == 2 and direction_sq < player_size_sq + self.size ** 2:
+            #player.velocity += direction.unit * (1 - direction.length/(player.size+self.size))
+            #player.velocity += self.velocity * 0.5
+            player.velocity += direction.unit * self.velocity.length
             player.damage += self.damage
             self.time_to_live = 0
             return True
@@ -83,23 +92,27 @@ class Projectile(Entity):
             return False
 
     def from_bytes(self, bytes):
-        float_offsets = (0, 4, 8, 12, 16)
-        pos_x, pos_y, vel_x, vel_y = (
-            unpack('f', bytes[start:end])[0]
-            for start, end in zip(float_offsets, float_offsets[1:])
-        )
-        self.position = Vector((pos_x, pos_y))
-        self.velocity = Vector((vel_x, vel_y))
+        try:
+            float_offsets = (0, 4, 8, 12, 16)
+            pos_x, pos_y, vel_x, vel_y = (
+                unpack('f', bytes[start:end])[0]
+                for start, end in zip(float_offsets, float_offsets[1:])
+            )
+            self.position = Vector((pos_x, pos_y))
+            self.velocity = Vector((vel_x, vel_y))
 
-        colour1, colour2, colour3, ttl1, ttl2 = (
-            bytes[pos] for pos in (16, 17, 18, 19, 20)
-        )
-        self.colour = (colour1 << 16) + (colour2 << 8) + colour3
-        self.time_to_live = ttl1 << 8 + ttl2
+            colour1, colour2, colour3, ttl1, ttl2 = (
+                bytes[pos] for pos in (16, 17, 18, 19, 20)
+            )
+            self.colour = (colour1 << 16) + (colour2 << 8) + colour3
+            self.time_to_live = ttl1 << 8 + ttl2
 
-        self.damage, self.size, self.recoil, self.shape = (
-            bytes[pos] for pos in (21, 22, 23, 24)
-        )
+            self.damage, self.size, self.recoil, self.shape = (
+                bytes[pos] for pos in (21, 22, 23, 24)
+            )
+        except error:  # error is actually struct.error
+            print(bytes)
+            print(len(bytes))
 
     def to_bytes(self):
         res = bytearray()
@@ -175,7 +188,7 @@ class Flame(Projectile):
 
     def __init__(self, parent):
         super(Flame, self).__init__(
-            parent.position + parent.direction*parent.size*1.5,
+            parent.position + parent.direction*parent.size*1.2,
             parent.direction * Flame.speed,
             damage=Flame.damage,
             ttl=Flame.ttl,
@@ -201,16 +214,6 @@ class Flame(Projectile):
             return False
         else:
             return True
-
-    def hit(self, player):
-        direction = player.position - self.position
-        if direction.length_squared < player.size ** 2 + self.size ** 2:  # todo size squared can be caches
-            player.velocity += (direction + self.velocity) * self.impact
-            player.velocity.limit(MAX_VELOCITY)
-            player.damage += self.damage
-            return True
-        else:
-            return False
 
 
 class Player(Entity):
@@ -241,7 +244,7 @@ class Player(Entity):
 
     @property
     def size(self):
-        return max(self.score, 0) + SIZE
+        return max(self.score, 0) + self._size
 
     @property
     def front(self):
@@ -385,8 +388,8 @@ class Player(Entity):
         dmg1, dmg2, points1, points2 = (
             bytes[pos] for pos in (28, 29, 30, 31)
         )
-        self.damage = dmg1 << 8 + dmg2
-        self.points = points1 << 8 + points2
+        self.damage = (dmg1 << 8) + dmg2
+        self.points = (points1 << 8) + points2
         target_id, self.cool_down = (
             bytes[pos] for pos in (32, 33)
         )

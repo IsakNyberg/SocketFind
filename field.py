@@ -138,7 +138,6 @@ class Field:
             hit_players = []
             for projectile in self.projectiles:
                 if entity_a.is_hit(projectile):
-                    self.projectiles.remove(projectile)
                     hit_players.append(entity_a)
                     if self_index == entity_a.name:
                         self.status.append(SELF_HIT)
