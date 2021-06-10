@@ -316,13 +316,24 @@ def calc_projectile(proj, player):
     if sx*vy > vx*sy: s_phi *= -1
     if ex*vy > vx*ey: e_phi *= -1
 
-    s_pos = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(s_phi)
-    e_pos = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(e_phi)
+    s_pos_x = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(s_phi)
+    e_pos_x = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(e_phi)
 
     width = 1 + int(proj.size * 200 / e_depth)
     colour = proj.colour
 
-    return s_dist, draw_projectile, colour, s_pos, e_pos, width
+    s_pos_y = _SCREEN_MID + _VIEW_PLANE_DIST * 0.5 *_SCREEN_MID / s_dist
+    e_pos_y = _SCREEN_MID + _VIEW_PLANE_DIST * 0.5 *_SCREEN_MID / e_dist
+        # tan phi = screen_size/4dist = y_offset/screen_dist
+
+    return (
+        s_dist,
+        draw_projectile,
+        colour,
+        (s_pos_x, s_pos_y),
+        (e_pos_x, e_pos_y),
+        width,
+    )
     # TODO: what should these be sorted by?
 
 
@@ -336,8 +347,8 @@ def draw_projectile(screen, colour, s_pos, e_pos, width):
     pygame.draw.line(
         screen,
         colour,
-        (s_pos,  _SCREEN_MID),
-        (e_pos, _SCREEN_MID),
+        s_pos,
+        e_pos,
         width,
     )  # line
 
