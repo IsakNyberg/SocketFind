@@ -233,7 +233,7 @@ class Player(Entity):
         self.points = 0
         self.cool_down = 0
 
-        self.weapon = Bullet
+        self.weapon = random.choice((Bullet, Laser, Flame))
 
     @property
     def score(self):
