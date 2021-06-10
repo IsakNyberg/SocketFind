@@ -47,7 +47,12 @@ def draw_world(screen, field, player):
             continue
         elif abs(star[1] - parallax_pos[1]) > SCREEN_SIZE:
             continue
-        pygame.draw.circle(screen, '#ccccff', (star - parallax_pos).to_tuple(), 1)
+        pygame.draw.circle(
+            screen,
+            '#ccccff',
+            (star - parallax_pos).to_tuple(),
+            1 if r(0, 200) else 2,
+        )
 
 
 def draw_player(screen, entity, colour=OTHER_COLOUR, offset_x=0, offset_y=0, mini=False):
