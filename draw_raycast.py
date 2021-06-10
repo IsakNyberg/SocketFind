@@ -1,11 +1,16 @@
-import math
+from math import radians, tan, atan, cos, acos
 import time
 from statistics import mean
-from multiprocessing import Pool, get_context
 from itertools import starmap, cycle, chain
 from operator import itemgetter
 
 import pygame
+from pygame.draw import (
+    rect as py_draw_rect,
+    polygon as py_draw_poly,
+    line as py_draw_line,
+    circle as py_draw_circ,
+)
 from matrixx import Matrix as M, Vector as V, M2
 
 from constants import FIELD_SIZE
@@ -64,8 +69,8 @@ _DARKENER = lambda x: _LIGHT_A / (x**2 + _LIGHT_B) + _LIGHT_C
 
 # General data
 _SCREEN_MID = SCREEN_SIZE // 2
-_FOV_R = math.radians(FOV_D)
-_V_FOV_R = math.radians(V_FOV_D)
+_FOV_R = radians(FOV_D)
+_V_FOV_R = radians(V_FOV_D)
 _COLUMN_WIDTH = SCREEN_SIZE / COLUMN_COUNT
 _COLUMN_WIDTH_DRAW = int(SCREEN_SIZE / COLUMN_COUNT) + 1
 _COLUMN_BOUNDARIES = tuple(_COLUMN_WIDTH * i for i in range(COLUMN_COUNT + 1))
@@ -93,13 +98,13 @@ _FIELD_MID = V((_SCREEN_MID, _SCREEN_MID))
 
 _COLUMN_MIDPOINTS = (map(mean, zip(_COLUMN_BOUNDARIES, _COLUMN_BOUNDARIES[1:])))
     # distances are sampled for the middle of each column
-_COLUMN_DIST_TO_SCREEN = _SCREEN_MID / math.tan(0.5 * _FOV_R)  # 1
+_COLUMN_DIST_TO_SCREEN = _SCREEN_MID / tan(0.5 * _FOV_R)  # 1
 _COLUMN_ANGLES = tuple(
-    math.atan((x - _SCREEN_MID) / _COLUMN_DIST_TO_SCREEN)
+    atan((x - _SCREEN_MID) / _COLUMN_DIST_TO_SCREEN)
     for x in _COLUMN_MIDPOINTS
 )  # 2
 _COLUMN_ROT_MATS = tuple(map(M2.rot, _COLUMN_ANGLES))  # 3
-_COLUMN_COSINES = tuple(map(math.cos, _COLUMN_ANGLES))  # for 6
+_COLUMN_COSINES = tuple(map(cos, _COLUMN_ANGLES))  # for 6
 
 
 # Floor maths:
@@ -119,7 +124,7 @@ _COLUMN_COSINES = tuple(map(math.cos, _COLUMN_ANGLES))  # for 6
 #       x, y = pos + dist * ray
 
 _ROW_MIDPOINTS = map(mean, zip(_ROW_BOUNDARIES, _ROW_BOUNDARIES[1:]))
-_VIEW_PLANE_DIST = SCREEN_SIZE / (2 * math.tan(0.5 * _V_FOV_R)) * 0.1
+_VIEW_PLANE_DIST = SCREEN_SIZE / (2 * tan(0.5 * _V_FOV_R)) * 0.1
     # TODO: the maths does NOT account for the 0.1, but for some reason
     # it makes the image way more correct. Figure it oot
     # TODO rename
@@ -183,7 +188,7 @@ def draw_floor(screen, pos, view, rays):
     for i, (x, y) in enumerate(floor_positions):
         if max(abs(x-1000), abs(y-1000)) > 1100: continue
         #if x<=-5 or y<=-5 or x>=2005 or y>=2005: continue  # TODO: make this nicer
-        pygame.draw.rect(
+        py_draw_rect(
             screen,
             _FLOOR_COLOUR(x, y),
             _FLOOR_RECTS[i],
@@ -212,7 +217,7 @@ def calc_walls(field, pos, view, rays):
 
 
 def draw_wall(screen, wall_colour, wall):
-    pygame.draw.rect(screen, wall_colour, wall)
+    py_draw_rect(screen, wall_colour, wall)
 
 
 def calc_player(player, colour, me):
@@ -228,7 +233,7 @@ def calc_player(player, colour, me):
     dist = p2e.length
     dist_inv = 1 / dist
 
-    phi = 0 if depth > dist else math.acos(depth * dist_inv)
+    phi = 0 if depth > dist else acos(depth * dist_inv)
     if 2 * phi > _FOV_R: return  # outside FOV
 
     x1, y1 = p2e._value
@@ -236,11 +241,11 @@ def calc_player(player, colour, me):
     if x1*y2 > x2*y1:  # v nice solve, 3rd component of cross product
         phi = -phi
 
-    phi_sides = math.atan(10 * e.size * dist_inv)
+    phi_sides = atan(10 * e.size * dist_inv)
         # angle between p2e and p2(edges of circle)
-    left_x  = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(phi - phi_sides)
-    mid_x   = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(phi)
-    right_x = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(phi + phi_sides)
+    left_x  = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * tan(phi - phi_sides)
+    mid_x   = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * tan(phi)
+    right_x = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * tan(phi + phi_sides)
         # I couldn't not align these
 
     y_offset = 40 * _SCREEN_MID / depth  # TODO fix magic number from wall
@@ -266,24 +271,24 @@ def calc_players(field, me):
 
 
 def draw_player(screen, left_x, mid_x, right_x, y_offset, colour):
-    pygame.draw.polygon(screen, colour, (
+    py_draw_poly(screen, colour, (
         (left_x,  _SCREEN_MID),
         (mid_x,   _SCREEN_MID + y_offset),  # bottom
         (right_x, _SCREEN_MID),
         (mid_x,   _SCREEN_MID - y_offset * 0.5),  # top
     ))  # main shape
-    pygame.draw.polygon(screen, colour, (
+    py_draw_poly(screen, colour, (
         (left_x,  _SCREEN_MID + y_offset),  # bottom left
         (mid_x,   _SCREEN_MID + y_offset * 0.8),  # top
         (right_x, _SCREEN_MID + y_offset),  # bottom right
     ))  # stand triangle
-    pygame.draw.line(
+    py_draw_line(
         screen,
         '#2e3436',
         (left_x,  _SCREEN_MID),
         (right_x, _SCREEN_MID),
     )  # line in the middle
-    pygame.draw.circle(
+    py_draw_circ(
         screen,
         '#cc0000',
         (mid_x,  _SCREEN_MID + y_offset),
@@ -310,9 +315,9 @@ def calc_projectile(proj, me):
     s_dist = p2s.length
     e_dist = p2e.length
 
-    s_phi = math.acos(s_depth / s_dist) if s_depth < s_dist else 0
+    s_phi = acos(s_depth / s_dist) if s_depth < s_dist else 0
     if 2 * s_phi > _FOV_R: return
-    e_phi = math.acos(e_depth / e_dist) if e_depth < e_dist else 0
+    e_phi = acos(e_depth / e_dist) if e_depth < e_dist else 0
     if 2 * e_phi > _FOV_R: return
     # TODO: avoid skips?
 
@@ -322,19 +327,19 @@ def calc_projectile(proj, me):
     if vx*sy < vy*sx: s_phi = -s_phi
     if vx*ey < vy*ex: e_phi = -e_phi
 
-    s_pos_x = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(s_phi)
-    e_pos_x = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(e_phi)
+    s_pos_x = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * tan(s_phi)
+    e_pos_x = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * tan(e_phi)
 
     '''s_pos_x = e_pos_x = _SCREEN_MID
 
     if s_dist > s_depth:
         s_hypot = s_dist * _COLUMN_DIST_TO_SCREEN / s_depth
-        s_offset_x = math.sqrt(s_hypot*s_hypot - _COLUMN_DIST_TO_SCREEN_SQ)
+        s_offset_x = sqrt(s_hypot*s_hypot - _COLUMN_DIST_TO_SCREEN_SQ)
         s_pos_x = _SCREEN_MID + s_offset_x
 
     if e_dist > e_depth:
         e_hypot = e_dist * _COLUMN_DIST_TO_SCREEN / e_depth
-        e_offset_x = math.sqrt(e_hypot*e_hypot - _COLUMN_DIST_TO_SCREEN_SQ)
+        e_offset_x = sqrt(e_hypot*e_hypot - _COLUMN_DIST_TO_SCREEN_SQ)
         e_pos_x = _SCREEN_MID + e_offset_x'''
 
     width = 1 + int(proj.size * 200 / e_depth)
@@ -362,7 +367,7 @@ def calc_projectiles(field, me):
 
 
 def draw_projectile(screen, colour, s_pos, e_pos, width):
-    pygame.draw.line(
+    py_draw_line(
         screen,
         colour,
         s_pos,
@@ -372,19 +377,19 @@ def draw_projectile(screen, colour, s_pos, e_pos, width):
 
 
 def draw_crosshair(screen):
-    pygame.draw.line(
+    py_draw_line(
         screen,
         CROSSHAIR_COLOUR,
         (_SCREEN_MID, _SCREEN_MID + CROSSHAIR_SIZE),
         (_SCREEN_MID, _SCREEN_MID - CROSSHAIR_SIZE),
     )  # vertical
-    pygame.draw.line(
+    py_draw_line(
         screen,
         CROSSHAIR_COLOUR,
         (_SCREEN_MID + CROSSHAIR_SIZE, _SCREEN_MID),
         (_SCREEN_MID - CROSSHAIR_SIZE, _SCREEN_MID),
     )  # horizontal
-    pygame.draw.circle(
+    py_draw_circ(
         screen,
         CROSSHAIR_COLOUR,
         (_SCREEN_MID, _SCREEN_MID),
@@ -417,6 +422,5 @@ def draw_frame(screen, field, me):
         draw_func(screen, *args)
 
     draw_crosshair(screen)  # crosshair at the very end
-
 
 
