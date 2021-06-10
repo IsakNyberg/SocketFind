@@ -147,7 +147,7 @@ _FLOOR_SHADING = tuple(_DARKENER(dist) for dist in _FLOOR_PIXEL_DISTS)
     # TODO: add shading to floor in a nice way
 
 
-# entities
+# players
 PLAYER_HEIGHT = 1
 _PLAYER_CIRCLE_SCREEN_HEIGHT_MULT = 0.5 * SCREEN_SIZE * _VIEW_PLANE_DIST
     # this is hard to explain but the maths checks out, promise
@@ -156,6 +156,13 @@ TARGET_COLOUR = V([0x19, 0xff, 0xc1])
 WEAKNESS_COLOUR = V([0xcc, 0x47, 0x81])
 OTHER_COLOUR = V([0x6c, 0x55, 0xe0])
 COOL_DOWN_COLOUR = V([0xff, 0xf7, 0x8a])
+
+
+# projectiles
+_COLUMN_DIST_TO_SCREEN_SQ = _COLUMN_DIST_TO_SCREEN ** 2
+PROJECTILE_HEIGHT = 0.5
+    # 0: screen middle, 1: floor
+_PROJ_Y_MULT = _VIEW_PLANE_DIST * PROJECTILE_HEIGHT * _SCREEN_MID
 
 print(f'3d precomp finished in {round(time.time()-_t, 3)}s')
 
@@ -229,10 +236,6 @@ def calc_player(player, colour, me):
     if x1*y2 > x2*y1:  # v nice solve, 3rd component of cross product
         phi = -phi
 
-        # x-coord of middle of player
-    y_pos = _SCREEN_MID + (_VIEW_PLANE_DIST * _SCREEN_MID * dist_inv)
-    #    # y-coord of centre of ellipse on floor
-
     phi_sides = math.atan(10 * e.size * dist_inv)
         # angle between p2e and p2(edges of circle)
     left_x  = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(phi - phi_sides)
@@ -284,46 +287,61 @@ def draw_player(screen, left_x, mid_x, right_x, y_offset, colour):
         screen,
         '#cc0000',
         (mid_x,  _SCREEN_MID + y_offset),
-        2
+        2,
     )  # bottom circle
 
 
-def calc_projectile(proj, player):
-    p = player.position
-    start = proj.position + -5*proj.velocity
-    end = proj.position
+def calc_projectile(proj, me):
+    p = me.position
+    s = proj.position + -5*proj.velocity
+    e = proj.position
 
-    p2s = start - p
-    p2e = end - p
-    v = player.direction
+    p2s = s - p
+    p2e = e - p
+    v = me.direction
 
     s_depth = p2s @ v
     e_depth = p2e @ v
 
-    if FOV_D < 180 and (s_depth < 0 or e_depth < 0):
-        return  # skip if everything behind you
+    if FOV_D < 180 and (s_depth < 0 or e_depth < 0): return
+        # skip if everything behind you
         # TODO draw if one in front and one behind
 
     s_dist = p2s.length
     e_dist = p2e.length
 
-    s_phi = 0 if s_depth > s_dist else math.acos(s_depth / s_dist)
-    e_phi = 0 if e_depth > e_dist else math.acos(e_depth / e_dist)
+    s_phi = math.acos(s_depth / s_dist) if s_depth < s_dist else 0
+    if 2 * s_phi > _FOV_R: return
+    e_phi = math.acos(e_depth / e_dist) if e_depth < e_dist else 0
+    if 2 * e_phi > _FOV_R: return
+    # TODO: avoid skips?
 
-    sx, sy = start._value
-    ex, ey = end._value
     vx, vy = v._value
-    if sx*vy > vx*sy: s_phi *= -1
-    if ex*vy > vx*ey: e_phi *= -1
+    sx, sy = p2s._value
+    ex, ey = p2e._value
+    if vx*sy < vy*sx: s_phi = -s_phi
+    if vx*ey < vy*ex: e_phi = -e_phi
 
     s_pos_x = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(s_phi)
     e_pos_x = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(e_phi)
 
+    '''s_pos_x = e_pos_x = _SCREEN_MID
+
+    if s_dist > s_depth:
+        s_hypot = s_dist * _COLUMN_DIST_TO_SCREEN / s_depth
+        s_offset_x = math.sqrt(s_hypot*s_hypot - _COLUMN_DIST_TO_SCREEN_SQ)
+        s_pos_x = _SCREEN_MID + s_offset_x
+
+    if e_dist > e_depth:
+        e_hypot = e_dist * _COLUMN_DIST_TO_SCREEN / e_depth
+        e_offset_x = math.sqrt(e_hypot*e_hypot - _COLUMN_DIST_TO_SCREEN_SQ)
+        e_pos_x = _SCREEN_MID + e_offset_x'''
+
     width = 1 + int(proj.size * 200 / e_depth)
     colour = proj.colour
 
-    s_pos_y = _SCREEN_MID + _VIEW_PLANE_DIST * 0.5 *_SCREEN_MID / s_dist
-    e_pos_y = _SCREEN_MID + _VIEW_PLANE_DIST * 0.5 *_SCREEN_MID / e_dist
+    s_pos_y = _SCREEN_MID + _PROJ_Y_MULT / s_dist
+    e_pos_y = _SCREEN_MID + _PROJ_Y_MULT / e_dist
         # tan phi = screen_size/4dist = y_offset/screen_dist
 
     return (
