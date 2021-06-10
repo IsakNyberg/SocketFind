@@ -20,7 +20,7 @@ FOV_D = 90  # deg
 V_FOV_D = 90 # deg
 COLUMN_COUNT = 100
 ROW_COUNT = 50  # floor only
-FLOOR_CHECKERBOARD_SIZE = 20
+FLOOR_CHECKERBOARD_SIZE = 100
 FLOOR_STYLE = 'checkerboard'  # change this string
 CROSSHAIR_SIZE = 15
 CROSSHAIR_COLOUR = '#babdb6'
@@ -167,14 +167,13 @@ def xy_nonvec_calc(dist, pos_x, pos_y, ray_x, ray_y):
 
 def draw_floor(screen, pos, view, rays):
     # calculates and draws entire floor
-    flat_input_data = tuple(
-        (dist, *pos, *ray)
+    flat_input_data = (
+        (dist, *pos._value, *ray._value)
         for dist, ray in zip(_FLOOR_PIXEL_DISTS, cycle(rays))
     )
-    floor_positions = tuple(starmap(xy_nonvec_calc, flat_input_data))
+    floor_positions = starmap(xy_nonvec_calc, flat_input_data)
         # TODO: fix distances and skip big ones here
-    for i in range(ROW_COUNT * COLUMN_COUNT):
-        x, y = floor_positions[i]
+    for i, (x, y) in enumerate(floor_positions):
         if max(abs(x-1000), abs(y-1000)) > 1100: continue
         #if x<=-5 or y<=-5 or x>=2005 or y>=2005: continue  # TODO: make this nicer
         pygame.draw.rect(
@@ -225,8 +224,8 @@ def calc_player(entity, colour, player):
     phi = 0 if depth > dist else math.acos(depth * dist_inv)
     if 2 * phi > _FOV_R: return  # outside FOV
 
-    x1, y1 = p2e
-    x2, y2 = v
+    x1, y1 = p2e._value
+    x2, y2 = v._value
     if x1*y2 > x2*y1:  # v nice solve, 3rd component of cross product
         phi = -phi
 
@@ -311,16 +310,16 @@ def calc_projectile(proj, player):
     s_phi = 0 if s_depth > s_dist else math.acos(s_depth / s_dist)
     e_phi = 0 if e_depth > e_dist else math.acos(e_depth / e_dist)
 
-    sx, sy = start
-    ex, ey = end
-    vx, vy = v
+    sx, sy = start._value
+    ex, ey = end._value
+    vx, vy = v._value
     if sx*vy > vx*sy: s_phi *= -1
     if ex*vy > vx*ey: e_phi *= -1
 
     s_pos = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(s_phi)
     e_pos = _SCREEN_MID + _COLUMN_DIST_TO_SCREEN * math.tan(e_phi)
 
-    width = 1+int(proj.size * 200 / e_depth)
+    width = 1 + int(proj.size * 200 / e_depth)
     colour = proj.colour
 
     return s_dist, draw_projectile, colour, s_pos, e_pos, width
