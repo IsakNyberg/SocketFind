@@ -13,12 +13,10 @@ from field import *
 localIP = ""
 localPort = 63834
 bufferSize = 1024
-msgFromServer = "Hello UDP Client"
 
 NUM_BOTS = 3
 MAX_TTL = 2000
 
-bytesToSend = str.encode(msgFromServer)
 UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPServerSocket.bind((localIP, localPort))
 print("UDP server up and listening")
