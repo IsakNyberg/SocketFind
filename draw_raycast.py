@@ -46,6 +46,7 @@ WALL_COLOURS = [
     V((0x4d, 0xcc, 0xfc)),
 ]
 DARK_TILE = V((0x20, 0x3c, 0x1e))
+DARK_TILE = V((0x20, 0x20, 0x20))
 LITE_TILE = DARK_TILE * 1.2
 IMAGE = pygame.image.load("resources/bg2.jpg")
 _FLOOR_CHECKERBOARD_COLOURS = (DARK_TILE, LITE_TILE)
