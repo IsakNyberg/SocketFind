@@ -361,20 +361,20 @@ class Player(Entity):
         spring_factor = 1
         if x_pos + size > FIELD_SIZE:
             self.velocity += Vector((FIELD_SIZE - (x_pos + size), 0)) * spring_factor
-            self.direction *= Vector((-1, 1))
+            # self.direction *= Vector((-1, 1))
             bounce = True
         elif x_pos - size < 0:
             self.velocity += Vector((-x_pos + size, 0)) * spring_factor
-            self.direction *= Vector((-1, 1))
+            # self.direction *= Vector((-1, 1))
             bounce = True
 
         if y_pos + size > FIELD_SIZE:
             self.velocity += Vector((0, FIELD_SIZE - (y_pos + size))) * spring_factor
-            self.direction *= Vector((1, -1))
+            # self.direction *= Vector((1, -1))
             bounce = True
         elif y_pos - size < 0:
             self.velocity += Vector((0, -y_pos + size)) * spring_factor
-            self.direction *= Vector((1, -1))
+            # self.direction *= Vector((1, -1))
             bounce = True
         #if bounce:
         #    self.velocity.limit(MAX_VELOCITY)
