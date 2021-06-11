@@ -11,7 +11,7 @@ MAX_ACCELERATION = 1
 ACCELERATION_FRACTION = 30
 TURN_ANGLE = 2  # 120 * this many degrees per second
 FRICTION = 0.99  # set this to 0.99
-MAX_VELOCITY = 1  # set this to 4
+MAX_VELOCITY = 4  # set this to 4
 SIZE = 20
 
 
@@ -305,10 +305,27 @@ class Player(Entity):
         dist_squared = (self.position - other.position).length_squared
         if dist_squared < (self.size + other.size) ** 2:
             try:
-                new_velocity = (self.position - other.position).unit
-                new_length = (self.velocity.length + other.velocity.length) / 2
-                self.velocity = new_velocity * new_length
-                other.velocity = new_velocity * -new_length
+                direction = (self.position - other.position).unit
+                momentum = (other.velocity.length * other.size + self.velocity.length * self.size) / 2
+                own_length = momentum/self.size
+                other_length = momentum/other.size
+                self.velocity = direction * own_length
+                other.velocity = direction * -other_length
+
+                '''
+                # from here: wikipedia.org/wiki/Elastic_collision#Two-dimensional_collision_with_two_moving_objects
+                direction = self.position-other.position  # todo check if this should be normalized
+                length_squared = direction.length_squared
+                dot_product = (self.velocity-other.velocity) @ direction
+                total_mass = self.size + other.size
+                precompute = direction * (2*dot_product/(total_mass*length_squared))
+                print('pre', precompute)
+
+                self.velocity -= other.size * precompute
+                print('velocity', self.velocity)
+                other.velocity += self.size * precompute
+                '''
+
             except ZeroDivisionError:
                 print('Warning: Zero division in ball collision.')
                 pass
@@ -341,23 +358,23 @@ class Player(Entity):
         x_pos = self.position[0]
         y_pos = self.position[1]
         size = self.size
-        spring_factor = 0.001
+        spring_factor = 1
         if x_pos + size > FIELD_SIZE:
             self.velocity += Vector((FIELD_SIZE - (x_pos + size), 0)) * spring_factor
-            #self.direction *= Vector((-1, 1))
+            self.direction *= Vector((-1, 1))
             bounce = True
         elif x_pos - size < 0:
             self.velocity += Vector((-x_pos + size, 0)) * spring_factor
-            #self.direction *= Vector((-1, 1))
+            self.direction *= Vector((-1, 1))
             bounce = True
 
         if y_pos + size > FIELD_SIZE:
             self.velocity += Vector((0, FIELD_SIZE - (y_pos + size))) * spring_factor
-            #self.direction *= Vector((1, -1))
+            self.direction *= Vector((1, -1))
             bounce = True
         elif y_pos - size < 0:
             self.velocity += Vector((0, -y_pos + size)) * spring_factor
-            #self.direction *= Vector((1, -1))
+            self.direction *= Vector((1, -1))
             bounce = True
         #if bounce:
         #    self.velocity.limit(MAX_VELOCITY)
