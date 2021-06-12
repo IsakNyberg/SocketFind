@@ -84,7 +84,7 @@ class Projectile(Entity):
         elif self.shape == 2 and direction_sq < player_size_sq + self.size ** 2:
             #player.velocity += direction.unit * (1 - direction.length/(player.size+self.size))
             #player.velocity += self.velocity * 0.5
-            player.velocity += direction.unit * self.velocity.length
+            player.velocity += direction.unit * self.velocity.length * self.impact
             player.damage += self.damage
             self.time_to_live = 0
             return True
@@ -130,11 +130,11 @@ class Projectile(Entity):
 
 
 class Bullet(Projectile):
-    ttl = 500
+    ttl = 360
     damage = 1
     colour = 0xe67f19
     cool_down = 100
-    recoil = 30
+    recoil = 0
     speed = 7
     size = 5
     shape = 1  #line
@@ -153,7 +153,7 @@ class Bullet(Projectile):
 
 
 class Laser(Projectile):
-    ttl = 50
+    ttl = 60
     damage = 1
     colour = 0x66ff11
     cool_down = 20
@@ -216,6 +216,64 @@ class Flame(Projectile):
             return True
 
 
+class Mine(Projectile):
+    ttl = 120 * 10
+    damage = 1
+    colour = 0xffffff
+    cool_down = 120
+    recoil = 1
+    speed = 0
+    size = 3
+    shape = 2  #circle
+
+    def __init__(self, parent):
+        super(Mine, self).__init__(
+            parent.position - parent.direction*parent.size*1.2,
+            parent.direction * Flame.speed,
+            damage=Mine.damage,
+            ttl=Mine.ttl,
+            size=Mine.size,
+            colour=Mine.colour,
+            cool_down=Mine.cool_down,
+            recoil=Mine.recoil,
+            shape=Mine.shape,
+        )
+
+    def tick(self):
+        if self.time_to_live <= int(Mine.ttl * 0.05):
+            if self.time_to_live == int(Mine.ttl * 0.05):
+                self.colour = 0x000000
+            else:
+                r = min((self.colour & 0xff0000) + 0x050000, 0xff0000)
+                g = min((self.colour & 0x00ff00) + 0x000500, 0x00ff00)
+                b = min((self.colour & 0x0000ff) + 0x000007, 0x0000ff)
+                self.colour = r | g | b
+                self.size += 2
+        elif self.time_to_live < int(Mine.ttl * 0.2):
+            self.colour = 0xf00000
+        else:
+            self.colour = 0xffffff
+
+        if self.time_to_live > 0:
+            self.time_to_live -= 1
+            return False
+        else:
+            return True
+
+    def hit(self, player):
+        if self.time_to_live > int(Mine.ttl * 0.8):
+            return False
+        direction = player.position - self.position
+        if direction.length_squared < (player.size + Mine.size*20) ** 2:
+            self.time_to_live = min(int(Mine.ttl * 0.1), self.time_to_live)
+
+        if self.time_to_live == 0 and direction.length_squared < (player.size + self.size) ** 2:
+            player.velocity += direction.unit * 30
+            return True
+
+        return False
+
+
 class Player(Entity):
     sin = math.sin(math.radians(TURN_ANGLE))
     cos = math.cos(math.radians(TURN_ANGLE))
@@ -236,7 +294,7 @@ class Player(Entity):
         self.points = 0
         self.cool_down = 0
 
-        self.weapon = random.choice((Bullet, Laser, Flame))
+        self.weapon = Flame #random.choice((Bullet, Laser, Flame, Mine))
 
     @property
     def score(self):
