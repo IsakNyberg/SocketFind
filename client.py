@@ -110,10 +110,10 @@ if __name__ == '__main__':
             while TIMEOUT:
                 pass
 
+        status = field.tick(SELF_INDEX)
         if tick % 3:
             continue
 
-        status = field.tick(SELF_INDEX)
         for s in status:
             if s == WALL_COLLISION:
                 #sound1.play()
@@ -135,6 +135,8 @@ if __name__ == '__main__':
         draw_raycast.draw_frame(surfaceR, field, me)
             # this draws the entire frame
             # TODO: do the same for topdown
+        for p in field.projectiles:
+            draw_topdown.draw_projectile(surfaceL, p, offset=me.position)
 
         for player in field.players:
             colour = OTHER_COLOUR
@@ -148,9 +150,6 @@ if __name__ == '__main__':
                 colour = TARGET_COLOUR
 
             draw_topdown.draw_player(surfaceL, player, colour=colour, offset=me.position)
-
-        for p in field.projectiles:
-            draw_topdown.draw_projectile(surfaceL, p, offset=me.position)
 
         #text_surface = font.render(f'Score: {field.players[SELF_INDEX].score}/{field.score}', False, (0xff, 0xff, 0xff))
         #screen.blit(text_surface, (10, 10))

@@ -74,8 +74,15 @@ class Field:
     def remove(self, index):
         self.status.append(JOIN)
         del self.players[index]
-        for i in range(len(self.players)):
+        for i in range(index, len(self.players)):
             self.players[i].name = i
+
+        for i in range(len(self.projectiles)):
+            if self.projectiles[i].parent_index > index:
+                self.projectiles[i].parent_index -= 1
+            elif self.projectiles[i].parent_index == index:
+                del self.projectiles[i]
+
         self.new_targets()
 
     def new_targets(self):

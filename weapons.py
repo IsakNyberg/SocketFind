@@ -1,8 +1,11 @@
 import math
 import random
+import struct
 from struct import pack, unpack, error
 
+import matrixx
 from matrixx import Vector
+from matrixx import M2
 
 
 def from_bytes(players, source_bytes):
@@ -10,6 +13,15 @@ def from_bytes(players, source_bytes):
     projectile = WEAPON_LOOKUP[source_bytes[1]](parent)
     projectile.from_bytes(source_bytes[2:])
     return projectile
+
+
+index = 0
+spread_pattern = tuple(random.randint(0, 180) for _ in range(360*10))
+def spread_matrix(angle):
+    global index
+    index = (index + 1) % 300
+    angle = (spread_pattern[index] % angle * 2) - angle
+    return M2.rot(math.radians(angle))
 
 
 class Weapon:
@@ -20,7 +32,7 @@ class Weapon:
 
     def __init__(
             self, parent_index, position, velocity,  damage=1, ttl=1000,
-            size=3, colour=0xffffff, impact=1,
+            size=3, colour=0xffffff, impact=1, spread_angle=0
     ):
         self.parent_index = parent_index
         self.position = position
@@ -30,6 +42,9 @@ class Weapon:
         self.damage = damage
         self.size = size
         self.impact = impact
+
+        if spread_angle:
+            self.velocity = spread_matrix(spread_angle) @ self.velocity
 
     def get_dist_squared(self, pos):
         return (self.position - pos).length_squared
@@ -96,13 +111,13 @@ class Weapon:
 class Bullet(Weapon):
     WEAPON_ID = 1
     cool_down = 100
-    recoil = 1
+    recoil = 15
     shape = 1
 
     def __init__(self, parent):
         super(Bullet, self).__init__(
             parent.name,
-            parent.position + parent.direction*parent.size*1.5,
+            parent.position + parent.direction*parent.size,
             parent.direction * 7,
             damage=1,
             ttl=360,
@@ -120,12 +135,13 @@ class Laser(Weapon):
     def __init__(self, parent):
         super(Laser, self).__init__(
             parent.name,
-            parent.position + parent.direction*parent.size*1.5,
+            parent.position + parent.direction*parent.size,
             parent.direction * 7,
             damage=1,
             ttl=60,
             size=5,
             colour=0x66ff11,
+            spread_angle=2
         )
 
 
@@ -139,11 +155,12 @@ class Flame(Weapon):
         super(Flame, self).__init__(
             parent.name,
             parent.position + parent.direction*parent.size*1.2,
-            parent.direction * 3,
+            parent.direction * 3 + parent.velocity.limit(2),
             damage=1,
             ttl=150,
             size=5,
             colour=0xfff0f0,
+            spread_angle=4
         )
 
     def tick(self):
@@ -187,7 +204,7 @@ class Mine(Weapon):
         super(Mine, self).__init__(
             parent.name,
             parent.position - parent.direction*parent.size*1.2,
-            parent.direction * 1,
+            parent.direction * 1 + parent.velocity,
             damage=1,
             ttl=Mine.DURATION,
             size=3,
@@ -231,6 +248,24 @@ class Mine(Weapon):
         return False
 
 
+class Minigun(Weapon):
+    WEAPON_ID = 5
+    cool_down = 0
+    recoil = 0
+    shape = 1
+
+    def __init__(self, parent):
+        super(Minigun, self).__init__(
+            parent.name,
+            parent.position + parent.direction*parent.size,
+            parent.direction * 6 + parent.velocity,
+            damage=1,
+            ttl=50,
+            size=1,
+            colour=0xe67f19,
+            spread_angle=parent.velocity.length_squared + 6
+        )
+
 
 WEAPON_LOOKUP = {
     #0: Weapon,  # this one should not be used
@@ -238,4 +273,5 @@ WEAPON_LOOKUP = {
     2: Laser,
     3: Flame,
     4: Mine,
+    5: Minigun,
 }
