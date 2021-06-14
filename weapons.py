@@ -291,9 +291,11 @@ class Freeze(Weapon):
         direction = player.position - self.position
         if direction.length_squared < (self.size + player.size) ** 2:
             self.velocity = Vector((0, 0))
+            self.position = player.position - Vector((0.01, 0))  # todo remove this when grisha fixes bug
             self.colour = 0xd0d0ff
-            self.size = 15
-            player.velocity *= 0.8
+            self.size = player.size
+            self.time_to_live -= 1
+            player.velocity *= 0.94
             return False  # todo chance this back to True when dmg is used
         return False
 

@@ -1,6 +1,6 @@
 import math
 import random
-from struct import pack, unpack, error
+from struct import pack, unpack
 
 from matrixx import Vector, Matrix
 
@@ -8,9 +8,9 @@ import field
 import weapons
 from constants import FIELD_SIZE
 
-MAX_ACCELERATION = 1
+MAX_ACCELERATION = 1  # todo move these to player class
 ACCELERATION_FRACTION = 30
-TURN_ANGLE = 2  # 120 * this many degrees per second
+TURN_ANGLE = 3  # 120 * this many degrees per second
 FRICTION = 0.99  # set this to 0.99
 MAX_VELOCITY = 4  # set this to 4
 SIZE = 20
@@ -45,6 +45,12 @@ class Player(Entity):
     sin = math.sin(math.radians(TURN_ANGLE))
     cos = math.cos(math.radians(TURN_ANGLE))
     byte_len = 7*4 + 2*2 + 1*2
+    MAX_ACCELERATION = 1  # todo move these to player class
+    ACCELERATION_FRACTION = 30
+    TURN_ANGLE = 3  # 120 * this many degrees per second
+    FRICTION = 0.99  # set this to 0.99
+    MAX_VELOCITY = 4  # set this to 4
+    SIZE = 20
 
     def __init__(self, field, name, x=FIELD_SIZE // 2, y=FIELD_SIZE // 2):
         super().__init__(x, y)
