@@ -267,6 +267,37 @@ class Minigun(Weapon):
         )
 
 
+class Freeze(Weapon):
+    WEAPON_ID = 6
+    cool_down = 120
+    recoil = 0
+    shape = 2
+
+    def __init__(self, parent):
+        super(Freeze, self).__init__(
+            parent.name,
+            parent.position + parent.direction*parent.size,
+            parent.direction * 6 + parent.velocity,
+            damage=0,
+            ttl=120*3,
+            size=10,
+            colour=0x5084ac,
+        )
+
+    def hit(self, player):
+        if player.name == self.parent_index:
+            return False
+
+        direction = player.position - self.position
+        if direction.length_squared < (self.size + player.size) ** 2:
+            self.velocity = Vector((0, 0))
+            self.colour = 0xd0d0ff
+            self.size = 15
+            player.velocity *= 0.8
+            return False  # todo chance this back to True when dmg is used
+        return False
+
+
 WEAPON_LOOKUP = {
     #0: Weapon,  # this one should not be used
     1: Bullet,
@@ -274,4 +305,5 @@ WEAPON_LOOKUP = {
     3: Flame,
     4: Mine,
     5: Minigun,
+    6: Freeze,
 }

@@ -63,9 +63,9 @@ class Player(Entity):
 
         self.weapon = random.choice((
             weapons.Bullet, weapons.Laser, weapons.Flame,
-            weapons.Mine, weapons.Minigun
+            weapons.Mine, weapons.Minigun, weapons.Freeze
         ))
-        #self.weapon = weapons.Minigun
+        self.weapon = weapons.Freeze
 
     @property
     def score(self):
