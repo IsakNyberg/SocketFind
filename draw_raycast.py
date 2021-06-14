@@ -316,6 +316,8 @@ def calc_projectile(proj, me):
     s_dist = p2s.length
     e_dist = p2e.length
 
+    if not (s_dist and e_dist): return  # prevent DBZ when on top of projectile
+
     s_phi = acos(s_depth / s_dist) if s_depth < s_dist else 0
     if 2 * s_phi > _FOV_R: return
     e_phi = acos(e_depth / e_dist) if e_depth < e_dist else 0
