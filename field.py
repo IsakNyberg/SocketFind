@@ -3,6 +3,7 @@ import math
 import time
 
 from entity import *
+import weapons
 
 from matrixx import Vector
 
@@ -169,18 +170,18 @@ class Field:
             self.new_player()
 
         projectiles = received_bytes[1]
-        while projectiles < len(self.projectiles):
-            del self.projectiles[0]
-        while projectiles > len(self.projectiles):
-            self.new_projectile(Projectile(Vector((0, 0)), Vector((0, 0))))
+        self.projectiles = []
 
         received_bytes = received_bytes[2:]
         for i, player in enumerate(self.players):
             player.from_bytes(received_bytes[i * Player.byte_len: (i+1) * Player.byte_len], self)
 
         received_bytes = received_bytes[players * Player.byte_len:]
-        for i, projectile in enumerate(self.projectiles):
-            projectile.from_bytes(received_bytes[i * Projectile.byte_len: (i+1) * Projectile.byte_len])
+        byte_len = weapons.Weapon.byte_len
+        for i in range(projectiles):
+            relevant_bytes = received_bytes[i * byte_len: (i+1) * byte_len]
+            projectile = weapons.from_bytes(self.players, relevant_bytes)
+            self.projectiles.append(projectile)
 
         self.mutex = 0
 
