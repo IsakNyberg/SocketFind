@@ -31,14 +31,20 @@ def ai_thread(field, index):
         target_dir = (target.position + target.velocity*60 + target.direction*target.acceleration*60 - ai_player.position)
         current_dir = ai_player.direction
         direction = -int(current_dir[0] * target_dir[1] - current_dir[1] * target_dir[0])
-        shoot = 1 if random.randint(0, 500) == 2 else 0
-        move = 1 if ai_player.get_dist_squared(target.position) > 900 else 0
-        field.steer(index, direction, move, shoot)
+        shoot = 1 if random.randint(0, 200) == 2 else 0
+        switch = 1 if random.randint(0, 500) == 2 else 0
+        move = 1 if target_dir.length_squared > 900 else 0
+        field.steer(index, direction, move, shoot, switch)
         time.sleep(0.01)
 
 
+max_length = 1024
 def flood(connections, connections_ttl, bytes_to_send):
     try:
+        if len(bytes_to_send) > max_length:
+            print('Max length exceeded, skipping packet')
+            return
+
         for i in range(len(connections)):
             bytes_to_send += (i + NUM_BOTS).to_bytes(1, 'big')
             UDPServerSocket.sendto(bytes_to_send, connections[i])
