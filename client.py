@@ -7,6 +7,7 @@ from matrixx import Vector as V
 
 from field import *
 import draw_topdown, draw_raycast
+from draw_gui import draw_gui
 from constants import SCREEN_SIZE, HALF_SCREEN
 import action
 
@@ -85,8 +86,8 @@ if __name__ == '__main__':
     cur_actions = action.ActionStatus()
 
     screen = pygame.display.set_mode([SCREEN_SIZE*2, SCREEN_SIZE])
-    surfaceL = pygame.Surface(screen.get_size())
-    surfaceR = pygame.Surface(screen.get_size())
+    surfaceL = pygame.Surface((SCREEN_SIZE, SCREEN_SIZE))
+    surfaceR = pygame.Surface((SCREEN_SIZE, SCREEN_SIZE))
     tick = 0
     running = True
     print('start Game')
@@ -151,9 +152,9 @@ if __name__ == '__main__':
 
             draw_topdown.draw_player(surfaceL, player, colour=colour, offset=me.position)
 
-        #text_surface = font.render(f'Score: {field.players[SELF_INDEX].score}/{field.score}', False, (0xff, 0xff, 0xff))
-        #screen.blit(text_surface, (10, 10))
         screen.blit(surfaceL, (0, 0))
         screen.blit(surfaceR, (SCREEN_SIZE, 0))
+
+        draw_gui(screen, field, me)
         pygame.display.update()
 
