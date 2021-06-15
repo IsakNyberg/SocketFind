@@ -102,8 +102,6 @@ class Field:
             ((0, 0), (FIELD_SIZE, 0)),
             ((FIELD_SIZE, FIELD_SIZE), (0, FIELD_SIZE)),
             ((FIELD_SIZE, FIELD_SIZE), (FIELD_SIZE, 0)),
-            ((FIELD_SIZE/2, FIELD_SIZE/2), (FIELD_SIZE/2, 0)),  # del me
-            ((FIELD_SIZE/2, FIELD_SIZE/2), (FIELD_SIZE/4, 0)),
         )
         x1, y1 = pos
         x2, y2 = pos + step
