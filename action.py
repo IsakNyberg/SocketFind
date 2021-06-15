@@ -7,6 +7,8 @@ class Action(Flag):
     STOP = auto()
     RIGHT = auto()
     SHOOT = auto()
+    WEAPON_UP = auto()
+    WEAPON_DOWN = auto()
 
 
 KEYS_BINDINGS = {
@@ -15,6 +17,8 @@ KEYS_BINDINGS = {
     ord('s'): Action.STOP,
     ord('d'): Action.RIGHT,
     ord(' '): Action.SHOOT,
+    ord('e'): Action.WEAPON_UP,
+    ord('q'): Action.WEAPON_DOWN,
 }
 
 
@@ -41,6 +45,7 @@ class ActionStatus:
             (Action.LEFT in self.cur) - (Action.RIGHT in self.cur),
             (Action.FWD in self.cur) - (Action.STOP in self.cur),
             Action.SHOOT in self.cur,
+            (Action.WEAPON_UP in self.cur) - (Action.WEAPON_DOWN in self.cur),
         )
 
     def update_from_pygame(self, keys):

@@ -51,6 +51,7 @@ class Player(Entity):
     FRICTION = 0.99  # set this to 0.99
     MAX_VELOCITY = 4  # set this to 4
     SIZE = 20
+    SWITCH_COOL_DOWN = 60
 
     def __init__(self, field, name, x=FIELD_SIZE // 2, y=FIELD_SIZE // 2):
         super().__init__(x, y)
@@ -67,11 +68,11 @@ class Player(Entity):
         self.points = 0
         self.cool_down = 0
 
-        self.weapon = random.choice((
+        self.weapons = (
             weapons.Bullet, weapons.Laser, weapons.Flame,
             weapons.Mine, weapons.Minigun, weapons.Freeze
-        ))
-        self.weapon = weapons.Freeze
+        )
+        self.weapon_index = 0
 
     @property
     def score(self):
@@ -84,6 +85,10 @@ class Player(Entity):
     @property
     def front(self):
         return self.points - self.damage
+
+    @property
+    def weapon(self):
+        return self.weapons[self.weapon_index]
 
     def set_position(self, x=-1, y=-1):
         if x == -1 and y == -1:
@@ -104,7 +109,7 @@ class Player(Entity):
         self.position.limit_zero(FIELD_SIZE)
         self.velocity *= FRICTION
 
-    def steer(self, turn, forward, shoot=0):
+    def steer(self, turn, forward, shoot=0, weapon_switch=0):
         if turn > 0:  # anti clockwise
             rotation_matrix = Matrix(((Player.cos, Player.sin), (-Player.sin, Player.cos)))
         elif turn < 0:  # clockwise
@@ -125,6 +130,13 @@ class Player(Entity):
 
         if shoot:
             self.shoot()
+
+        if weapon_switch and not self.cool_down:
+            self.cool_down = self.SWITCH_COOL_DOWN
+            self.weapon_index += weapon_switch
+            self.weapon_index = self.weapon_index % len(self.weapons)
+
+
 
     def accelerate(self):
         if self.acceleration == 0:

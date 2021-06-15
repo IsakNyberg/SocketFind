@@ -90,9 +90,9 @@ class Field:
         for entity in self.players:
             entity.new_target(self.players)
 
-    def steer(self, n, turn, forward, shoot):
+    def steer(self, n, turn, forward=0, shoot=0, weapon_switch=0):
         self.mutex_wait()
-        self.players[n].steer(turn, forward, shoot)
+        self.players[n].steer(turn, forward, shoot, weapon_switch)
         self.mutex = 0
 
     def cast_ray_at_wall(self, pos, step):
