@@ -27,12 +27,19 @@ def draw_gui(screen, field, me):
     )
     screen.blit(my_score_surf, (5, 0))
 
+    my_health_surf = FONT.render(
+        f'Health: {me.health}',
+        True,
+        '#d3d7cf',
+    )
+    screen.blit(my_health_surf, (5, 25))
+
     f_score_surf = FONT.render(
         f'Field Score: {field.score}',
         True,
         '#d3d7cf',
     )
-    screen.blit(f_score_surf, (5, 25))
+    screen.blit(f_score_surf, (5, 50))
 
     screen.blit(
         WEAPON_MINI_ICONS[(me.weapon_index + 1) % WEAPON_COUNT],

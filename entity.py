@@ -8,13 +8,6 @@ import field
 import weapons
 from constants import FIELD_SIZE
 
-MAX_ACCELERATION = 1  # todo move these to player class
-ACCELERATION_FRACTION = 30
-TURN_ANGLE = 3  # 120 * this many degrees per second
-FRICTION = 0.99  # set this to 0.99
-MAX_VELOCITY = 4  # set this to 4
-SIZE = 20
-
 
 def normalize(a, b):
     sum_ = math.sqrt(a * a + b * b)
@@ -42,15 +35,15 @@ class Entity:
 
 
 class Player(Entity):
+    TURN_ANGLE = 3  # 120 * this many degrees per second
     sin = math.sin(math.radians(TURN_ANGLE))
     cos = math.cos(math.radians(TURN_ANGLE))
-    byte_len = 7*4 + 2*2 + 1*2
-    MAX_ACCELERATION = 1  # todo move these to player class
-    ACCELERATION_FRACTION = 30
-    TURN_ANGLE = 3  # 120 * this many degrees per second
+    byte_len = 4*6 + 2*3 + 1*2
+    MAX_ACCELERATION = 1
+    ACCELERATION_FACTOR = 30
     FRICTION = 0.99  # set this to 0.99
     MAX_VELOCITY = 4  # set this to 4
-    SIZE = 20
+    INIT_SIZE = 30
     SWITCH_COOL_DOWN = 60
 
     def __init__(self, field, name, x=FIELD_SIZE // 2, y=FIELD_SIZE // 2):
@@ -60,8 +53,6 @@ class Player(Entity):
         self.velocity = Vector((1, 0))
         self.direction = Vector((1.0, 0.0))
         self.acceleration = 0
-
-        self._size = SIZE
 
         self.target = self
         self.damage = 0
@@ -73,7 +64,7 @@ class Player(Entity):
             weapons.Mine, weapons.Minigun, weapons.Freeze,
             weapons.Meltdown
         )
-        self.weapon_index = 6
+        self.weapon_index = 0
 
     @property
     def score(self):
@@ -81,11 +72,11 @@ class Player(Entity):
 
     @property
     def size(self):
-        return max(self.score, 0) + self._size
+        return max(self.score, 0) + self.INIT_SIZE
 
     @property
-    def front(self):
-        return self.points - self.damage
+    def health(self):
+        return self.score + self.INIT_SIZE
 
     @property
     def weapon(self):
@@ -103,12 +94,12 @@ class Player(Entity):
             x = random.randint(-FIELD_SIZE, FIELD_SIZE)
             y = random.randint(-FIELD_SIZE, FIELD_SIZE)
         vector = Vector((x, y))
-        self.velocity = vector.limit(MAX_VELOCITY)
+        self.velocity = vector.limit(self.MAX_VELOCITY)
 
     def move(self):
         self.position += self.velocity
         self.position.limit_zero(FIELD_SIZE)
-        self.velocity *= FRICTION
+        self.velocity *= self.FRICTION
 
     def steer(self, turn, forward, shoot=0, weapon_switch=0):
         if turn > 0:  # anti clockwise
@@ -140,10 +131,10 @@ class Player(Entity):
     def accelerate(self):
         if self.acceleration == 0:
             return
-        acceleration = self.direction * (self.acceleration / ACCELERATION_FRACTION)
-        self.velocity += acceleration
-        self.velocity.limit(MAX_VELOCITY)
-        self.acceleration *= FRICTION
+        accel = self.direction*(self.acceleration/self.ACCELERATION_FACTOR)
+        self.velocity += accel
+        self.velocity.limit(self.MAX_VELOCITY)
+        self.acceleration *= self.FRICTION
 
     def is_colliding(self, other):
         if other is self:
@@ -234,27 +225,41 @@ class Player(Entity):
         self.field.new_projectile(self.weapon(self))
 
     def is_hit(self, projectile):
-        return projectile.hit(self)
+        dmg = projectile.hit(self)
+        self.damage += dmg
+        return bool(dmg)
+
+    def is_dead(self):
+        if self.health < 0:
+            x = random.randint(self.INIT_SIZE, FIELD_SIZE - self.INIT_SIZE)
+            y = random.randint(self.INIT_SIZE, FIELD_SIZE - self.INIT_SIZE)
+            self.__init__(self.field, self.name, x, y)
+            return True
+        return False
 
     def from_bytes(self, bytes, field):
         # current length  7*4 + 1*4 = 32 source_bytes
-        float_offsets = (0, 4, 8, 12, 16, 20, 24, 28)
-        pos_x, pos_y, dir_x, dir_y, vel_x, vel_y, acceleration = (
+        float_offsets = (0, 4, 8, 12, 16, 20, 24)
+        pos_x, pos_y, dir_x, dir_y, vel_x, vel_y = (
             unpack('f', bytes[start:end])[0]
             for start, end in zip(float_offsets, float_offsets[1:])
         )
         self.position = Vector((pos_x, pos_y))
         self.direction = Vector((dir_x, dir_y))
         self.velocity = Vector((vel_x, vel_y))
-        self.acceleration = acceleration
+        #self.acceleration = acceleration
 
-        dmg1, dmg2, points1, points2 = (
-            bytes[pos] for pos in (28, 29, 30, 31)
-        )
+        dmg1, dmg2 = (bytes[pos] for pos in (24, 25))
         self.damage = (dmg1 << 8) + dmg2
+
+        points1, points2 = (bytes[pos] for pos in (26, 27))
         self.points = (points1 << 8) + points2
-        target_id, self.cool_down = (
-            bytes[pos] for pos in (32, 33)
+
+        cd1, cd2 = (bytes[pos] for pos in (28, 29))
+        self.cool_down = (cd1 << 8) + cd2
+
+        target_id, self.weapon_index = (
+            bytes[pos] for pos in (30, 31)
         )
         self.target = field.players[target_id]
 
@@ -267,9 +272,9 @@ class Player(Entity):
         res += pack('f', self.direction[1])  # 4
         res += pack('f', self.velocity[0])  # 4
         res += pack('f', self.velocity[1])  # 4
-        res += pack('f', self.acceleration)  # 4
         res += self.damage.to_bytes(2, 'big')  # 2
         res += self.points.to_bytes(2, 'big')  # 2
+        res += self.cool_down.to_bytes(2, 'big')  # 1
         res += self.target.name.to_bytes(1, 'big')  # 1
-        res += self.cool_down.to_bytes(1, 'big')  # 1
+        res += self.weapon_index.to_bytes(1, 'big')  # 1
         return res

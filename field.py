@@ -13,6 +13,7 @@ OTHER_COLLISION = 1 << 1
 SELF_HIT = 1 << 2
 TARGET_HIT = 1 << 3
 JOIN = 1 << 4
+TODO = 123
 
 
 class Field:
@@ -30,7 +31,6 @@ class Field:
 
         self.mutex = 0
 
-        self.self_index = -1
         self.tick_count = 0
         self.next_tick = time.time()
 
@@ -144,6 +144,8 @@ class Field:
             hit_players = []
             for projectile in self.projectiles:
                 if entity_a.is_hit(projectile):
+                    if entity_a.is_dead():
+                        self.status.append(TODO)
                     hit_players.append(entity_a)
                     if self_index == entity_a.name:
                         self.status.append(SELF_HIT)
@@ -151,12 +153,12 @@ class Field:
                         self.status.append(TARGET_HIT)
 
             for entity_b in self.players:
-                if entity_b.target in hit_players:
-                    entity_b.new_target(self.players)
-                    entity_b.points += 1
                 if entity_a is entity_b:
                     continue
-                if entity_a.is_colliding(entity_b):
+                elif entity_b.target in hit_players:
+                    entity_b.new_target(self.players)
+                    entity_b.points += 1
+                elif entity_a.is_colliding(entity_b):
                     self.status.append(OTHER_COLLISION)
 
         for projectile in self.projectiles:
@@ -179,7 +181,10 @@ class Field:
 
         received_bytes = received_bytes[2:]
         for i, player in enumerate(self.players):
-            player.from_bytes(received_bytes[i * Player.byte_len: (i+1) * Player.byte_len], self)
+            player.from_bytes(
+                received_bytes[i * Player.byte_len: (i+1) * Player.byte_len],
+                self
+            )
 
         received_bytes = received_bytes[players * Player.byte_len:]
         byte_len = weapons.Weapon.byte_len
