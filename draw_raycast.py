@@ -408,7 +408,7 @@ def draw_frame(screen, field, me):
     rays = tuple(rot_mat @ view for rot_mat in _COLUMN_ROT_MATS)
 
     draw_floor(screen, pos, view, rays)  # floor (duh)
-        # note that floor is drawn first because nothing can be behind it
+    # note that floor is drawn first because nothing can be behind it
 
     calculated_walls = calc_walls(field, pos, view, rays)
     calculated_players = calc_players(field, me)

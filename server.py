@@ -15,7 +15,7 @@ localPort = 63834
 bufferSize = 1024
 
 NUM_BOTS = 3
-MAX_TTL = 2000
+MAX_TTL = 3000
 
 UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPServerSocket.bind((localIP, localPort))
@@ -42,7 +42,7 @@ max_length = 1024
 def flood(connections, connections_ttl, bytes_to_send):
     try:
         if len(bytes_to_send) > max_length:
-            print('Max length exceeded, skipping packet')
+            print(f'Max length exceeded, skipping packet {len(bytes_to_send)}')
             return
 
         for i in range(len(connections)):
@@ -55,13 +55,13 @@ def flood(connections, connections_ttl, bytes_to_send):
 
 def game_thread(field, connections, connections_ttl):
     tick = 0
-    #clock = pygame.time.Clock()
+    clock = pygame.time.Clock()
     while 1:
         if tick % 1 == 0:
             flood(connections, connections_ttl,  field.to_bytes())
         field.tick()
         tick += 1
-        #clock.tick(128)
+        clock.tick(128)
 
 
 if __name__ == '__main__':
