@@ -107,12 +107,11 @@ if __name__ == '__main__':
         clock.tick(128)
         tick += 1
 
-        if TIMEOUT:
-            while TIMEOUT:
-                pass
+        while TIMEOUT:
+            pass
 
         status = field.tick(SELF_INDEX)
-        if tick % 3:
+        if tick % 3 == 0:
             continue
 
         for s in status:

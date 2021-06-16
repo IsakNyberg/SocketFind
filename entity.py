@@ -70,9 +70,10 @@ class Player(Entity):
 
         self.weapons = (
             weapons.Bullet, weapons.Laser, weapons.Flame,
-            weapons.Mine, weapons.Minigun, weapons.Freeze
+            weapons.Mine, weapons.Minigun, weapons.Freeze,
+            weapons.Meltdown
         )
-        self.weapon_index = 0
+        self.weapon_index = 6
 
     @property
     def score(self):
@@ -135,8 +136,6 @@ class Player(Entity):
             self.cool_down = self.SWITCH_COOL_DOWN
             self.weapon_index += weapon_switch
             self.weapon_index = self.weapon_index % len(self.weapons)
-
-
 
     def accelerate(self):
         if self.acceleration == 0:

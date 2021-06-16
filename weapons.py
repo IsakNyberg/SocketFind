@@ -149,7 +149,7 @@ class Flame(Weapon):
     WEAPON_ID = 3
     cool_down = 3
     recoil = 1
-    shape = 2
+    shape = 3
 
     def __init__(self, parent):
         super(Flame, self).__init__(
@@ -291,12 +291,56 @@ class Freeze(Weapon):
         direction = player.position - self.position
         if direction.length_squared < (self.size + player.size) ** 2:
             self.velocity = Vector((0, 0))
-            self.position = player.position - Vector((0.01, 0))  # todo remove this when grisha fixes bug
+            self.position = player.position
             self.colour = 0xd0d0ff
             self.size = player.size
             self.time_to_live -= 1
             player.velocity *= 0.94
             return False  # todo chance this back to True when dmg is used
+        return False
+
+
+class Meltdown(Weapon):
+    WEAPON_ID = 7
+    cool_down = 1<<8
+    recoil = 0
+    shape = 2
+    MAX_REACH = 800
+
+    def __init__(self, parent):
+        super(Meltdown, self).__init__(
+            parent.name,
+            parent.position + parent.direction*parent.size,
+            parent.velocity,
+            damage=100,
+            ttl=1 << 8,
+            size=1,
+            colour=0x000000,
+        )
+
+    def tick(self):
+        size_increase = 0.3
+        self.size += size_increase
+        r = min((self.colour & 0xff0000) + 0x010000, 0xff0000)
+        g = min((self.colour & 0x00ff00) + 0x000300, 0x00ff00)
+        b = min((self.colour & 0x0000ff) + 0x000002, 0x0000ff)
+        self.colour = r | g | b
+        if self.time_to_live > 0:
+            self.time_to_live -= 1
+            return False
+        else:
+            return True
+
+    def hit(self, player):
+        if player.name == self.parent_index:
+            self.position = player.position
+            player.velocity = self.velocity
+            return False
+        elif self.time_to_live == 0:
+            direction = self.position - player.position
+            if direction.length_squared < (self.size + player.size) ** 2:
+                player.damage += self.damage
+                return True
         return False
 
 
@@ -308,4 +352,5 @@ WEAPON_LOOKUP = {
     4: Mine,
     5: Minigun,
     6: Freeze,
+    7: Meltdown,
 }
