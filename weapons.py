@@ -32,7 +32,7 @@ class Weapon:
 
     def __init__(
             self, parent_index, position, velocity,  damage=1, ttl=1000,
-            size=3, colour=0xffffff, impact=1, spread_angle=0
+            size=3, colour=0xffffff, impact=1.0, spread_angle=0
     ):
         self.parent_index = parent_index
         self.position = position
@@ -57,12 +57,6 @@ class Weapon:
         else:
             return True
 
-    def colour_tuple(self):
-        r = ((self.colour >> 16) & 0xff) / 255
-        g = ((self.colour >> 8) & 0xff) / 255
-        b = (self.colour & 0xff) / 255
-        return r, g, b
-
     def hit(self, player):
         if player.name == self.parent_index:
             return False
@@ -71,9 +65,8 @@ class Weapon:
         player_size_sq = player.size ** 2
         if direction_sq < player_size_sq:  # todo size squared can be cached
             player.velocity += (self.velocity * self.impact)
-            player.damage += self.damage
             self.time_to_live = 0
-            return True
+            return self.damage
         else:
             return False
 
@@ -90,7 +83,7 @@ class Weapon:
             source_bytes[pos] for pos in (16, 17, 18, 19, 20)
         )
         self.colour = (colour1 << 16) + (colour2 << 8) + colour3
-        self.time_to_live = ttl1 << 8 + ttl2
+        self.time_to_live = (ttl1 << 8) + ttl2
 
         self.size = source_bytes[21]
 
@@ -119,7 +112,7 @@ class Bullet(Weapon):
             parent.name,
             parent.position + parent.direction*parent.size,
             parent.direction * 7,
-            damage=1,
+            damage=10,
             ttl=360,
             size=5,
             colour=0xe67f19,
@@ -137,7 +130,7 @@ class Laser(Weapon):
             parent.name,
             parent.position + parent.direction*parent.size,
             parent.direction * 7,
-            damage=1,
+            damage=5,
             ttl=60,
             size=5,
             colour=0x66ff11,
@@ -149,14 +142,14 @@ class Flame(Weapon):
     WEAPON_ID = 3
     cool_down = 3
     recoil = 1
-    shape = 3
+    shape = 2
 
     def __init__(self, parent):
         super(Flame, self).__init__(
             parent.name,
             parent.position + parent.direction*parent.size*1.2,
             parent.direction * 3 + parent.velocity.limit(2),
-            damage=1,
+            damage=2,
             ttl=150,
             size=5,
             colour=0xfff0f0,
@@ -184,9 +177,8 @@ class Flame(Weapon):
         direction_sq = direction.length_squared
         if direction_sq < player.size ** 2 + self.size ** 2:
             player.velocity += direction.unit*self.velocity.length*self.impact
-            player.damage += self.damage
             self.time_to_live = 0
-            return True
+            return self.damage
         else:
             return False
 
@@ -205,7 +197,7 @@ class Mine(Weapon):
             parent.name,
             parent.position - parent.direction*parent.size*1.2,
             parent.direction * 1 + parent.velocity,
-            damage=1,
+            damage=25,
             ttl=Mine.DURATION,
             size=3,
             colour=0xffffff,
@@ -234,7 +226,7 @@ class Mine(Weapon):
 
     def hit(self, player):
         if self.time_to_live > int(Mine.SAFE_DURATION):
-            return False
+            return 0
 
         direction = player.position - self.position
         if direction.length_squared < Mine.DETECTION_RADIUS ** 2:
@@ -243,9 +235,9 @@ class Mine(Weapon):
         if self.time_to_live == 0:
             if direction.length_squared < (player.size + self.size) ** 2:
                 player.velocity += direction.unit * 30
-                return True
+                return self.damage
 
-        return False
+        return 0
 
 
 class Minigun(Weapon):
@@ -263,7 +255,8 @@ class Minigun(Weapon):
             ttl=50,
             size=1,
             colour=0xe67f19,
-            spread_angle=parent.velocity.length_squared + 6
+            spread_angle=parent.velocity.length_squared + 6,
+            impact=0.5
         )
 
 
@@ -286,7 +279,7 @@ class Freeze(Weapon):
 
     def hit(self, player):
         if player.name == self.parent_index:
-            return False
+            return 0
 
         direction = player.position - self.position
         if direction.length_squared < (self.size + player.size) ** 2:
@@ -297,12 +290,12 @@ class Freeze(Weapon):
             self.time_to_live -= 1
             player.velocity *= 0.94
             return False  # todo chance this back to True when dmg is used
-        return False
+        return 0
 
 
 class Meltdown(Weapon):
     WEAPON_ID = 7
-    cool_down = 1<<8
+    cool_down = 1 << 8
     recoil = 0
     shape = 2
     MAX_REACH = 800
@@ -312,7 +305,7 @@ class Meltdown(Weapon):
             parent.name,
             parent.position + parent.direction*parent.size,
             parent.velocity,
-            damage=100,
+            damage=parent.score + parent.size + 10,
             ttl=1 << 8,
             size=1,
             colour=0x000000,
@@ -334,14 +327,13 @@ class Meltdown(Weapon):
     def hit(self, player):
         if player.name == self.parent_index:
             self.position = player.position
-            player.velocity = self.velocity
-            return False
-        elif self.time_to_live == 0:
+            #player.velocity = self.velocity
+
+        if self.time_to_live == 0:
             direction = self.position - player.position
             if direction.length_squared < (self.size + player.size) ** 2:
-                player.damage += self.damage
-                return True
-        return False
+                return self.damage
+        return 0
 
 
 WEAPON_LOOKUP = {
