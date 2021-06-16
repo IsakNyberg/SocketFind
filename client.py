@@ -17,7 +17,7 @@ serverAddressPort = ('localhost', 63834)
 bufferSize = 1024
 
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-UDPClientSocket.settimeout(1)
+UDPClientSocket.settimeout(5)
 SELF_COLOUR = V([0x1c, 0xff, 0x91])
 TARGET_COLOUR = V([0x19, 0xff, 0xc1])
 WEAKNESS_COLOUR = V([0xcc, 0x47, 0x81])
@@ -58,7 +58,6 @@ def server_connect(field):
             UDPClientSocket.sendto(b'0x00', serverAddressPort)
             received_byes = UDPClientSocket.recvfrom(bufferSize)[0]
             self_index = received_byes[-1]
-            field.self_index = SELF_INDEX
             received_byes = received_byes[:-1]
             field.from_bytes(received_byes)
         except socket.timeout:
@@ -95,6 +94,8 @@ if __name__ == '__main__':
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+        clock.tick(128)
+        tick += 1
 
         # get steering data and send to server
         cur_actions.update_from_pygame(pygame.key.get_pressed())
@@ -103,12 +104,6 @@ if __name__ == '__main__':
             cur_actions.as_byte,
             serverAddressPort,
         )
-
-        clock.tick(128)
-        tick += 1
-
-        while TIMEOUT:
-            pass
 
         status = field.tick(SELF_INDEX)
         if tick % 3 == 0:
@@ -128,28 +123,8 @@ if __name__ == '__main__':
                 sound5.play()
 
         me = field.players[SELF_INDEX]
-        offset_x = me.position[0] - HALF_SCREEN
-        offset_y = me.position[1] - HALF_SCREEN
-
-        draw_topdown.draw_world(surfaceL, field, me)
+        draw_topdown.draw_frame(surfaceL, field, me)
         draw_raycast.draw_frame(surfaceR, field, me)
-            # this draws the entire frame
-            # TODO: do the same for topdown
-        for p in field.projectiles:
-            draw_topdown.draw_projectile(surfaceL, p, offset=me.position)
-
-        for player in field.players:
-            colour = OTHER_COLOUR
-            if player.cool_down:
-                colour = COOL_DOWN_COLOUR
-            elif player is me:
-                colour = SELF_COLOUR
-            elif player.target is me:
-                colour = WEAKNESS_COLOUR
-            elif player is me.target:
-                colour = TARGET_COLOUR
-
-            draw_topdown.draw_player(surfaceL, player, colour=colour, offset=me.position)
 
         screen.blit(surfaceL, (0, 0))
         screen.blit(surfaceR, (SCREEN_SIZE, 0))

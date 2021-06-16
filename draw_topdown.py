@@ -11,24 +11,25 @@ from matrixx import Vector as V
 
 DISPLAY_ID = 1
 
-BACKGROUND = '#000000'
-SELF_COLOUR = '#1cff91'
-WEAKNESS_COLOUR = '#cc4781'
-OTHER_COLOUR = '#6c55e0'
-COOL_DOWN_COLOUR = '#fff78a'
+SELF_COLOUR = V([0x1c, 0xff, 0x91])
+TARGET_COLOUR = V([0x19, 0xff, 0xc1])
+WEAKNESS_COLOUR = V([0xcc, 0x47, 0x81])
+OTHER_COLOUR = V([0x6c, 0x55, 0xe0])
+COOL_DOWN_COLOUR = V([0xff, 0xf7, 0x8a])
 # PROJECTILE_COLOUR = '#e0303a' use projectile.colour instead
 BG = pygame.image.load("resources/bg2.jpg")
 MINI_OFFSET = 100
 
 total_stars = 500
 parallax = 0.5
-star_min, star_max = int(-SCREEN_SIZE * parallax), int(FIELD_SIZE * parallax + SCREEN_SIZE)
+star_min = int(-SCREEN_SIZE * parallax)
+star_max = int(FIELD_SIZE*parallax + SCREEN_SIZE)
 stars = tuple(Vector((r(star_min, star_max), r(star_min, star_max))) for _ in range(total_stars))
 parallax_list = tuple(random.random() / 5 + 0.3 for _ in range(total_stars))
 
 
 def draw_world(screen, field, player):
-    screen.fill(BACKGROUND)
+    screen.fill('0x000000')
     pos = player.position - V((HALF_SCREEN, HALF_SCREEN))
     for start, end in field.walls:
         start_perspective = start - pos
@@ -102,5 +103,36 @@ def draw_projectile(screen, projectile, offset=V((0, 0))):
         position = (projectile.position - offset + screen_center).to_tuple()
         radius = projectile.size
         pygame.draw.circle(screen, colour, position, radius)
+    elif projectile.shape == 3:  # arc
+        position = (projectile.position - offset + screen_center)
+        pos_offset = Vector((projectile.size, projectile.size))
+        pos1 = (position - pos_offset).to_tuple()
+        pos2 = (pos_offset*2).to_tuple()
+
+        reference_vector = V((0, 1))
+        angle_offset = reference_vector @ projectile.velocity
+        angle_offset *= math.copysign(1/projectile.velocity.length, projectile.velocity[0])
+        angle1 = 0 - math.acos(angle_offset)
+        angle2 = math.pi - math.acos(angle_offset)
+        pygame.draw.arc(screen, colour, pos1+pos2, angle1, angle2, 5)
     else:
         print(f'Projectile shape ({projectile.shape}) unknown.')
+
+
+def draw_frame(screen, field, player):
+    draw_world(screen, field, player)
+    for p in field.projectiles:
+        draw_projectile(screen, p, offset=player.position)
+
+    for p in field.players:
+        colour = OTHER_COLOUR
+        if p.cool_down:
+            colour = COOL_DOWN_COLOUR
+        elif p is player:
+            colour = SELF_COLOUR
+        elif p.target is player:
+            colour = WEAKNESS_COLOUR
+        elif p is player.target:
+            colour = TARGET_COLOUR
+
+        draw_player(screen, p, colour=colour, offset=player.position)
