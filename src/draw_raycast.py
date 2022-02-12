@@ -48,7 +48,7 @@ WALL_COLOURS = [
 DARK_TILE = V((0x20, 0x3c, 0x1e))
 DARK_TILE = V((0x20, 0x20, 0x20))
 LITE_TILE = DARK_TILE * 1.2
-IMAGE = pygame.image.load("resources/bg2.jpg")
+IMAGE = pygame.image.load("res/bg2.jpg")
 _FLOOR_CHECKERBOARD_COLOURS = (DARK_TILE, LITE_TILE)
 _FLOOR_COLOUR = {
     'checkerboard': lambda x, y: _FLOOR_CHECKERBOARD_COLOURS[

@@ -75,11 +75,11 @@ if __name__ == '__main__':
     thread.start()
 
     pygame.init()
-    sound1 = pygame.mixer.Sound('resources/sound1.ogg')
-    sound2 = pygame.mixer.Sound('resources/sound2.ogg')
-    sound3 = pygame.mixer.Sound('resources/sound3.ogg')
-    sound4 = pygame.mixer.Sound('resources/sound4.ogg')
-    sound5 = pygame.mixer.Sound('resources/sound5.ogg')
+    sound1 = pygame.mixer.Sound('res/sound1.ogg')
+    sound2 = pygame.mixer.Sound('res/sound2.ogg')
+    sound3 = pygame.mixer.Sound('res/sound3.ogg')
+    sound4 = pygame.mixer.Sound('res/sound4.ogg')
+    sound5 = pygame.mixer.Sound('res/sound5.ogg')
     clock = pygame.time.Clock()
 
     cur_actions = action.ActionStatus()

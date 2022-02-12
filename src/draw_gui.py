@@ -9,11 +9,11 @@ FONT = pygame.font.SysFont('Comic Sans MS', 20)
 
 WEAPON_COUNT = len(weapons.WEAPON_LOOKUP)
 WEAPON_ICONS = tuple(
-    pygame.image.load(f'resources/w_icon_{i}.png')  # TODO: convert?
+    pygame.image.load(f'res/w_icon_{i}.png')  # TODO: convert?
     for i in range(1, WEAPON_COUNT+1)
 )
 WEAPON_MINI_ICONS = tuple(
-    pygame.image.load(f'resources/w_icon_{i}_mini.png')
+    pygame.image.load(f'res/w_icon_{i}_mini.png')
     for i in range(1, WEAPON_COUNT+1)
 )  # TODO: draw icons with pygame with optional scaling?
 

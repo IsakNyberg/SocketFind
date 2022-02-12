@@ -17,7 +17,7 @@ WEAKNESS_COLOUR = V([0xcc, 0x47, 0x81])
 OTHER_COLOUR = V([0x6c, 0x55, 0xe0])
 COOL_DOWN_COLOUR = V([0xff, 0xf7, 0x8a])
 # PROJECTILE_COLOUR = '#e0303a' use projectile.colour instead
-BG = pygame.image.load("resources/bg2.jpg")
+BG = pygame.image.load("res/bg2.jpg")
 MINI_OFFSET = 100
 
 total_stars = 500
